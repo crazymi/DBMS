@@ -7,19 +7,9 @@ options
 
 PARSER_BEGIN(DBMSParser)
 
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-
-import com.sleepycat.je.Database;
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
-import com.sleepycat.je.Cursor;
-
-import com.sleepycat.je.Environment;
-import com.sleepycat.je.EnvironmentConfig;
-import com.sleepycat.je.LockMode;
-import com.sleepycat.je.OperationStatus;
+import tazo.Column;
+import tazo.DBMSController;
+import tazo.Table;
 
 public class DBMSParser
 {
@@ -32,60 +22,12 @@ public class DBMSParser
   public static final int PRINT_INSERT = 6;
   public static final int PRINT_DELETE = 7;
   public static final String CONSOLE_STR = "DB_2013-11384> ";
+
+  public static DBMSController controller;
   
   public static void main(String args[]) throws ParseException
   {
-    // Environment & Database define
-    Environment myDbEnvironment = null;
-    Database myDatabase = null;
-
-    /* OPENING DB */
-
-    // Open Database Environment or if not, create one.
-    EnvironmentConfig envConfig = new EnvironmentConfig();
-    envConfig.setAllowCreate(true);
-    myDbEnvironment = new Environment(new File("db/"), envConfig);
-
-    // Open Database or if not, create one.
-    DatabaseConfig dbConfig = new DatabaseConfig();
-    dbConfig.setAllowCreate(true);
-    dbConfig.setSortedDuplicates(true);
-    myDatabase = myDbEnvironment.openDatabase(null, "sampleDatabase", dbConfig);
-
-    /* PUT <K,V > INTO DB */
-    Cursor cursor = null;
-    DatabaseEntry key;
-    DatabaseEntry data;
-
-    try {
-      cursor = myDatabase.openCursor(null, null);
-      key = new DatabaseEntry("key".getBytes("UTF-8"));
-      data = new DatabaseEntry("value".getBytes("UTF-8"));
-      cursor.put(key, data);
-    } catch (DatabaseException de) {
-    } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
-    }
-
-    /* GET <K,V > FROM DB */
-    DatabaseEntry foundKey = new DatabaseEntry();
-    DatabaseEntry foundData = new DatabaseEntry();
-
-    cursor.getFirst(foundKey, foundData, LockMode.DEFAULT);
-
-    do {
-      try {
-        String keyString = new String(foundKey.getData(), "UTF-8");
-        String dataString = new String(foundData.getData(), "UTF-8");
-      } catch (UnsupportedEncodingException e) {
-        e.printStackTrace();
-      }
-    } while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
-    
-    /* CLOSING DB */
-    if (myDatabase != null) myDatabase.close();
-    if (myDbEnvironment != null) myDbEnvironment.close();
-	    
+    controller = new DBMSController();
     DBMSParser parser = new DBMSParser(System.in);
     
     while (true)
@@ -207,6 +149,7 @@ void command() :
     < EXIT >
     < SEMICOLON >
     {
+      controller.close();
       System.exit(0);
     }
   ) 
@@ -542,53 +485,78 @@ void dropTableQuery() :
 }
 
 void createTableQuery() :
-{}
+{
+  String s;
+  Table t;
+}
 {
   < CREATE >
   < TABLE >
-  tableName()
-  tableElementList()
+  s = tableName()
+  {
+    t = new Table(s);
+  }
+  tableElementList(t)
+  {
+    controller.createTable(t);
+  }
 }
 
-void tableElementList() :
+void tableElementList(Table t) :
 {}
 {
   < LEFT_PAREN >
-  tableElement()
+  tableElement(t)
   (
     < COMMA >
-    tableElement()
+    tableElement(t)
   )*
   < RIGHT_PAREN >
 }
 
-void tableElement() :
+void tableElement(Table t) :
 {
+  Column c;
 }
 {
-  columnDefinition()
-| tableConstraintDefinition()
+  c = columnDefinition()
+  {
+    t.addColumn(c);
+  }
+| tableConstraintDefinition(t)
 }
 
-void columnDefinition() :
-{}
+Column columnDefinition() :
 {
-  columnName()
-  dataType()
+  String n;
+  Column c;
+}
+{
+  n = columnName()
+  {
+    c = new Column(n);
+  }
+  dataType(c)
   (
     < NOT >
     < NULL >
+    {
+      c.is_not_null = true;
+    }
   )?
+  {
+    return c;
+  }
 }
 
-void tableConstraintDefinition() :
+void tableConstraintDefinition(Table t) :
 {}
 {
-  primaryKeyConstraint()
-| referentialConstraint()
+  primaryKeyConstraint(t)
+| referentialConstraint(t)
 }
 
-void primaryKeyConstraint() :
+void primaryKeyConstraint(Table t) :
 {}
 {
   < PRIMARY >
@@ -596,7 +564,7 @@ void primaryKeyConstraint() :
   columnNameList()
 }
 
-void referentialConstraint() :
+void referentialConstraint(Table t) :
 {}
 {
   < FOREIGN >
@@ -619,27 +587,49 @@ void columnNameList() :
   < RIGHT_PAREN >
 }
 
-void dataType() :
-{}
+void dataType(Column c) :
+{
+  Token t;
+}
 {
   < INT >
+  {
+    c.type = 1;
+  }
 | (
     < CHAR >
     < LEFT_PAREN >
-    < INT_VALUE >
+    t = < INT_VALUE >
     < RIGHT_PAREN >
+    {
+      c.type = 2;
+      c.char_length = Integer.parseInt(t.toString());
+    }
   )
 | < DATE >
+{
+  c.type = 3;
+}
 }
 
-void tableName() :
-{}
+String tableName() :
 {
-  < LEGAL_IDENTIFIER >
+  Token t;
+}
+{
+  t = < LEGAL_IDENTIFIER >
+  {
+    return t.toString();
+  }  
 }
 
-void columnName() :
-{}
+String columnName() :
 {
-  < LEGAL_IDENTIFIER >
+  Token t;
+}
+{
+    t = < LEGAL_IDENTIFIER >
+    {
+      return t.toString();
+    }
 }

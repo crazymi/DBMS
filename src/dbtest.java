@@ -1,10 +1,12 @@
 import java.io.File;
+
 import java.io.UnsupportedEncodingException;
 
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseException;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseEntry;
+import com.google.gson.Gson;
 import com.sleepycat.je.Cursor;
 
 import com.sleepycat.je.Environment;
@@ -12,12 +14,36 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 
+import tazo.Table;
+import tazo.Column;
+
 public class dbtest {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		System.out.println("hello world!");
+		test();
+/*
 		
+		String t2json = new Gson().toJson(t);
+		String col2json = new Gson().toJson(col);
+		
+		System.out.println("Table -> json");
+		System.out.println(t2json);
+		
+		System.out.println("Column -> json");
+		System.out.println(col2json);
+		
+		Table nt = new Gson().fromJson(t2json, Table.class);
+		nt.dropColumn("tazo");
+		t2json = new Gson().toJson(nt);
+		System.out.println("dropped");
+		System.out.println(t2json);
+		*/
+	}
+	
+	public static void test()
+	{
 		 // Environment & Database define
 	    Environment myDbEnvironment = null;
 	    Database myDatabase = null;
@@ -33,10 +59,13 @@ public class dbtest {
 	    DatabaseConfig dbConfig = new DatabaseConfig();
 	    dbConfig.setAllowCreate(true);
 	    dbConfig.setSortedDuplicates(true);
-	    myDatabase = myDbEnvironment.openDatabase(null, "sampleDatabase", dbConfig);
+	    myDatabase = myDbEnvironment.openDatabase(null, "schema", dbConfig);
 
 	    /* PUT <K,V > INTO DB */
+	    
+	    
 	    Cursor cursor = null;
+	    /*
 	    DatabaseEntry key;
 	    DatabaseEntry data;
 
@@ -52,7 +81,7 @@ public class dbtest {
 			if(cursor != null) cursor.close();
 		}
 
-
+*/
 	    /* GET <K,V > FROM DB */
 	    DatabaseEntry foundKey = new DatabaseEntry();
 	    DatabaseEntry foundData = new DatabaseEntry();
@@ -65,17 +94,12 @@ public class dbtest {
 	        String keyString = new String(foundKey.getData(), "UTF-8");
 	        String dataString = new String(foundData.getData(), "UTF-8");
 	        System.out.println("<" + keyString + ", " + dataString + ">");
-	        if(keyString.equals("k")) cursor.delete();
 	      } catch (UnsupportedEncodingException e) {
 	        e.printStackTrace();
 	      }
 	    } while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
 	    if (cursor != null) cursor.close();
 	    System.out.println("-----");
-	    
-	    /* CLOSING DB */
-	    if (myDatabase != null) myDatabase.close();
-	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
 
 }
