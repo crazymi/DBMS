@@ -1,7 +1,3 @@
-package tazo;
-
-import java.util.ArrayList;
-
 public class Column
 {		
 	/* columnDefinition */

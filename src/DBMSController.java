@@ -1,5 +1,3 @@
-package tazo;
-
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 
@@ -40,7 +38,7 @@ public class DBMSController {
 	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
 	
-	public void createTable(Table t) {
+	public void createTable(Table t) throws ParseException {
 		Cursor cursor = null;
 	    DatabaseEntry key;
 	    DatabaseEntry data;
@@ -52,9 +50,33 @@ public class DBMSController {
 	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
 	    	  System.out.println(DBMSException.TABLE_EXISTENCE_ERROR);
 	    	  // already exist
+	    	  throw new ParseException();
 	      } else { // == NOTFOUND
 	    	  data = new DatabaseEntry((new Gson().toJson(t)).getBytes("UTF-8"));
 	    	  cursor.put(key, data);
+	      }
+	    } catch (DatabaseException de) {
+	    } catch (UnsupportedEncodingException e) {
+	      e.printStackTrace();
+	    } finally {
+			if(cursor != null) cursor.close();
+		}
+	}
+	
+	public void dropTable(String n) throws ParseException {
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+
+	    try {
+	      cursor = mySchema.openCursor(null, null);
+	      key = new DatabaseEntry(n.getBytes("UTF-8"));
+	      data = new DatabaseEntry();
+	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    	  cursor.delete();
+	      } else { // == NOTFOUND
+	    	  System.out.println(DBMSException.NO_SUCH_TABLE);
+	    	  throw new ParseException();
 	      }
 	    } catch (DatabaseException de) {
 	    } catch (UnsupportedEncodingException e) {

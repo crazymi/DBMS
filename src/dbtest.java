@@ -14,9 +14,6 @@ import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 
-import tazo.Table;
-import tazo.Column;
-
 public class dbtest {
 
 	public static void main(String[] args) {

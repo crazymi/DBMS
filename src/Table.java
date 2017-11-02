@@ -1,5 +1,3 @@
-package tazo;
-
 import java.util.ArrayList;
 
 public class Table {
@@ -20,7 +18,14 @@ public class Table {
 	
 	public Table(String name) { this.name = name; }
 	
-	public void addColumn(Column col) {
+	public void addColumn(Column col) throws ParseException {
+		for(Column c : columnList) {
+			if(c.name.equals(col.name)) {
+				// already exist column name
+				System.out.println(DBMSException.DUPLICATE_COLUMN_DEF_ERROR);
+				throw new ParseException();
+			}
+		}
 		columnList.add(col);
 	}
 	

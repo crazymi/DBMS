@@ -1,4 +1,4 @@
-package tazo;
+
 
 public class DBMSException {
 	

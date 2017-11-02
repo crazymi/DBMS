@@ -9,10 +9,6 @@ PARSER_BEGIN(DBMSParser)
 
 import java.util.ArrayList;
 
-import tazo.Column;
-import tazo.DBMSController;
-import tazo.Table;
-
 public class DBMSParser
 {
   public static final int PRINT_SYNTAX_ERROR = 0;
@@ -25,11 +21,11 @@ public class DBMSParser
   public static final int PRINT_DELETE = 7;
   public static final String CONSOLE_STR = "DB_2013-11384> ";
 
-  public static DBMSController controller;
+  public static DBMSController ctrl;
   
   public static void main(String args[]) throws ParseException
   {
-    controller = new DBMSController();
+    ctrl = new DBMSController();
     DBMSParser parser = new DBMSParser(System.in);
     
     while (true)
@@ -41,7 +37,7 @@ public class DBMSParser
       }
       catch (Exception e)
       {
-        printMessage(PRINT_SYNTAX_ERROR);
+        // printMessage(PRINT_SYNTAX_ERROR);
 //        System.out.println(e);
 		DBMSParser.ReInit(System.in);
       }
@@ -151,7 +147,7 @@ void command() :
     < EXIT >
     < SEMICOLON >
     {
-      controller.close();
+      ctrl.close();
       System.exit(0);
     }
   ) 
@@ -479,11 +475,16 @@ void descQuery() :
 }
 
 void dropTableQuery() :
-{}
+{
+  String n;
+}
 {
   < DROP >
   < TABLE >
-  tableName()
+  n = tableName()
+  {
+    ctrl.dropTable(n);
+  }    
 }
 
 void createTableQuery() :
@@ -500,7 +501,7 @@ void createTableQuery() :
   }
   tableElementList(t)
   {
-    controller.createTable(t);
+    ctrl.createTable(t);
   }
 }
 
