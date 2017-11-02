@@ -1,0 +1,645 @@
+options
+{
+  static = true;
+  DEBUG_PARSER = false;
+  IGNORE_CASE = true;
+}
+
+PARSER_BEGIN(DBMSParser)
+
+import java.io.File;
+import java.io.UnsupportedEncodingException;
+
+import com.sleepycat.je.Database;
+import com.sleepycat.je.DatabaseException;
+import com.sleepycat.je.DatabaseConfig;
+import com.sleepycat.je.DatabaseEntry;
+import com.sleepycat.je.Cursor;
+
+import com.sleepycat.je.Environment;
+import com.sleepycat.je.EnvironmentConfig;
+import com.sleepycat.je.LockMode;
+import com.sleepycat.je.OperationStatus;
+
+public class DBMSParser
+{
+  public static final int PRINT_SYNTAX_ERROR = 0;
+  public static final int PRINT_CREATE_TABLE = 1;
+  public static final int PRINT_DROP_TABLE = 2;
+  public static final int PRINT_DESC = 3;
+  public static final int PRINT_SHOW_TABLES = 4;
+  public static final int PRINT_SELECT = 5;
+  public static final int PRINT_INSERT = 6;
+  public static final int PRINT_DELETE = 7;
+  public static final String CONSOLE_STR = "DB_2013-11384> ";
+  
+  public static void main(String args[]) throws ParseException
+  {
+    // Environment & Database define
+    Environment myDbEnvironment = null;
+    Database myDatabase = null;
+
+    /* OPENING DB */
+
+    // Open Database Environment or if not, create one.
+    EnvironmentConfig envConfig = new EnvironmentConfig();
+    envConfig.setAllowCreate(true);
+    myDbEnvironment = new Environment(new File("db/"), envConfig);
+
+    // Open Database or if not, create one.
+    DatabaseConfig dbConfig = new DatabaseConfig();
+    dbConfig.setAllowCreate(true);
+    dbConfig.setSortedDuplicates(true);
+    myDatabase = myDbEnvironment.openDatabase(null, "sampleDatabase", dbConfig);
+
+    /* PUT <K,V > INTO DB */
+    Cursor cursor = null;
+    DatabaseEntry key;
+    DatabaseEntry data;
+
+    try {
+      cursor = myDatabase.openCursor(null, null);
+      key = new DatabaseEntry("key".getBytes("UTF-8"));
+      data = new DatabaseEntry("value".getBytes("UTF-8"));
+      cursor.put(key, data);
+    } catch (DatabaseException de) {
+    } catch (UnsupportedEncodingException e) {
+      e.printStackTrace();
+    }
+
+    /* GET <K,V > FROM DB */
+    DatabaseEntry foundKey = new DatabaseEntry();
+    DatabaseEntry foundData = new DatabaseEntry();
+
+    cursor.getFirst(foundKey, foundData, LockMode.DEFAULT);
+
+    do {
+      try {
+        String keyString = new String(foundKey.getData(), "UTF-8");
+        String dataString = new String(foundData.getData(), "UTF-8");
+      } catch (UnsupportedEncodingException e) {
+        e.printStackTrace();
+      }
+    } while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
+    
+    /* CLOSING DB */
+    if (myDatabase != null) myDatabase.close();
+    if (myDbEnvironment != null) myDbEnvironment.close();
+	    
+    DBMSParser parser = new DBMSParser(System.in);
+    
+    while (true)
+    {
+      try
+      {
+        System.out.print(CONSOLE_STR);
+        parser.command();
+      }
+      catch (Exception e)
+      {
+        printMessage(PRINT_SYNTAX_ERROR);
+//        System.out.println(e);
+		DBMSParser.ReInit(System.in);
+      }
+    }
+  }
+
+  public static void printMessage(int q)
+  {
+//    
+    switch(q)
+    {
+      case PRINT_SYNTAX_ERROR:
+      	System.out.println("Syntax error");
+      	break;
+      case PRINT_CREATE_TABLE:
+      	System.out.println("\'CREATE TABLE\' requested");
+      	break;
+      case PRINT_DROP_TABLE:
+      	System.out.println("\'DROP TABLE\' requested");
+      	break;
+      case PRINT_DESC:
+      	System.out.println("\'DESC\' requested");
+      	break;
+      case PRINT_SHOW_TABLES:
+      	System.out.println("\'SHOW TABLES\' requested");
+      	break;
+      case PRINT_SELECT:
+      	System.out.println("\'SELECT\' requested");
+      	break;
+      case PRINT_INSERT:
+      	System.out.println("\'INSERT\' requested");
+      	break;
+      case PRINT_DELETE:
+      	System.out.println("\'DELETE\' requested");
+      	break;     	
+    }
+  }
+}
+
+PARSER_END(DBMSParser)
+
+SKIP : { " " | "\r" | "\t" | "\n" }
+
+// note that keywords has to one-word
+TOKEN : /* Keywords */
+{
+  < EXIT : "exit" >
+| < INT : "int" >
+| < CHAR : "char" >
+| < DATE : "date" >
+| < CREATE : "create" >
+| < TABLE : "table" >
+| < DROP : "drop" >
+| < DESC : "desc" >
+| < SHOW : "show" >
+| < TABLES : "tables" >
+| < SELECT : "select" >
+| < INSERT : "insert" >
+| < INTO : "into" >
+| < VALUES : "values" >
+| < DELETE : "delete" >
+| < PRIMARY : "primary" >
+| < FOREIGN : "foreign" >
+| < KEY : "key" >
+| < REFERENCES : "references" >
+| < FROM : "from" >
+| < WHERE : "where" >
+| < IS : "is" >
+| < NULL : "null" >
+| < NOT : "not" >
+| < AND : "and" >
+| < OR : "or" >
+| < AS : "as" >
+}
+
+TOKEN :
+{
+  < CHAR_STRING : < QUOTE > (< NON_QUOTE_CHARACTER >)* < QUOTE >>
+| < INT_VALUE : (< SIGN >)? (< DIGIT >)+>
+| < DATE_VALUE : < NNNN > < DASH > < NN > < DASH > < NN >>
+| < LEGAL_IDENTIFIER : < ALPHABET > (< ALPHABET > | < UNDERSCORE >)* >
+| < SEMICOLON : ";" >
+| < LEFT_PAREN : "(" >
+| < RIGHT_PAREN : ")" >
+| < COMMA : "," >
+| < PERIOD : "." >
+| < UNDERSCORE : "_" >
+| < DASH : "-" >
+| < ASTERISK : "*" >
+| < COMP_OP : "<" | ">" | "=" | ">=" | "<=" | "!=" >
+| < SIGN : "+" | "-" >
+| < NNNN : < DIGIT >< DIGIT >< DIGIT >< DIGIT >>
+| < NN : < DIGIT >< DIGIT >>
+| < DIGIT : [ "0"-"9" ] >
+| < ALPHABET : [ "a"-"z", "A"-"Z" ] >
+| < QUOTE : "'" >
+| < NON_QUOTE_CHARACTER : < DIGIT > | < ALPHABET >
+						| < NON_QUOTE_SPECIAL_CHARACTERS > | " ">
+| < NON_QUOTE_SPECIAL_CHARACTERS : ["`", "~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "-", "_", "=", "+", "[", "{", "]", "}", "\\", "|", ";", ":", ",", "<", ".", ">", "/","?"]>
+}
+
+void command() :
+{}
+{
+  queryList()
+| (
+    < EXIT >
+    < SEMICOLON >
+    {
+      System.exit(0);
+    }
+  ) 
+}
+
+void queryList() :
+{
+  int q;
+}
+{
+  (
+    q = query()
+    < SEMICOLON >
+    {
+      System.out.print(CONSOLE_STR);
+      printMessage(q);
+    }
+  )+
+}
+
+int query() :
+{
+  int q;
+}
+{
+  (
+  	createTableQuery()
+    {
+      q = PRINT_CREATE_TABLE;
+    }
+  |
+  	dropTableQuery()
+    {
+      q = PRINT_DROP_TABLE;
+    }
+  |
+    descQuery()
+    {
+      q = PRINT_DESC;
+    }
+  |
+    showTablesQuery()
+    {
+      q = PRINT_SHOW_TABLES;
+    }
+  |
+    selectQuery()
+    {
+      q = PRINT_SELECT;
+    }
+  |
+    insertQuery()
+    {
+      q = PRINT_INSERT;
+    }
+  |
+    deleteQuery()
+    {
+      q = PRINT_DELETE;
+    } 
+  )
+  (
+    {
+      return q;
+    }
+  )
+}
+
+void deleteQuery() :
+{}
+{
+  < DELETE >
+  < FROM >
+  tableName()
+  (
+    whereClause()
+  )?
+}
+
+void insertQuery() :
+{}
+{
+  < INSERT >
+  < INTO >
+  tableName()
+  insertColumnsAndSource()
+}
+
+void insertColumnsAndSource() :
+{}
+{
+  (
+    columnNameList()
+  )?
+  valueList()
+}
+
+void valueList() :
+{
+}
+{
+  < VALUES >
+  < LEFT_PAREN >
+  value()
+  (
+    < COMMA >
+    value()
+  )*
+  < RIGHT_PAREN >
+}
+
+void value() :
+{}
+{
+  < NULL >
+| comparableValue()
+}
+
+void selectQuery() :
+{}
+{
+  < SELECT >
+  selectList()
+  tableExpression()
+}
+
+void selectList() :
+{}
+{
+  < ASTERISK >
+| selectedColumn()
+(
+  < COMMA >
+  selectedColumn()
+)*
+}
+
+void selectedColumn() :
+{}
+{
+  (
+    LOOKAHEAD(2)
+    tableName()
+    < PERIOD >
+  )?
+  columnName()
+  (
+    < AS >
+    columnName()
+  )?
+}
+
+void tableExpression() :
+{}
+{
+  fromClause()
+  (
+    whereClause()
+  )?
+}
+
+void fromClause() :
+{}
+{
+  < FROM >
+  tableReferenceList()
+}
+
+void tableReferenceList() :
+{}
+{
+  referedTable()
+  (
+    < COMMA >
+    referedTable()
+  )*
+}
+
+void referedTable() :
+{}
+{
+  tableName()
+  (
+    < AS >
+    tableName()
+  )?
+}
+
+void whereClause() :
+{}
+{
+  < WHERE >
+  booleanValueExpression()
+}
+
+void booleanValueExpression() :
+{}
+{
+  booleanTerm()
+  (
+    < OR >
+    booleanTerm()
+  )*
+}
+
+void booleanTerm() :
+{}
+{
+  booleanFactor()
+  (
+    < AND >
+    booleanFactor()
+  )*
+}
+
+void booleanFactor() :
+{}
+{
+  (
+    < NOT >
+  )?
+  booleanTest()
+}
+
+void booleanTest() :
+{}
+{
+  (
+    predicate()
+  | parenthesizedBooleanExpression()
+  )
+}
+
+void parenthesizedBooleanExpression() :
+{}
+{
+ < LEFT_PAREN >
+ booleanValueExpression()
+ < RIGHT_PAREN >
+}
+
+void predicate() :
+{}
+{
+  (
+    // A common prefix is : < LEGAL_IDENTIFIER > "."
+    // so need to using a lookahead of 3 or more
+    // above is compiler's recommend, but the common prefix can be 3 tokens as
+    // <TABLE NAME > <PERIOD > <COLUMN NAME >,  so we need to lookahead at least 4.
+    LOOKAHEAD(4)
+    comparisonPredicate()
+  | nullPredicate()
+  )
+}
+
+void comparisonPredicate() :
+{}
+{
+  compOperand()
+  < COMP_OP >
+  compOperand()
+}
+
+void compOperand() :
+{}
+{
+  comparableValue()
+| (
+    (
+     // common prefixex is <LEGAL_IDENTIFIER >
+     // so using a lookahead of 2 or more
+      LOOKAHEAD(2)
+      tableName()
+      < PERIOD >
+    )?
+    columnName()
+  )
+}
+
+void comparableValue() :
+{}
+{
+  < INT_VALUE >
+| < CHAR_STRING >
+| < DATE_VALUE >
+}
+
+void nullOperation() :
+{}
+{
+  < IS >
+  (
+    < NOT >
+  )?
+  < NULL >
+}
+
+void nullPredicate() :
+{}
+{
+  (
+    // common prefixex is <LEGAL_IDENTIFIER >
+    // so using a lookahead of 2 or more
+    LOOKAHEAD(2)
+    tableName()
+    < PERIOD >
+  )?
+  columnName()
+  nullOperation()
+}
+
+
+void showTablesQuery() :
+{}
+{
+  < SHOW >
+  < TABLES >
+}
+
+void descQuery() :
+{}
+{
+  < DESC >
+  tableName()
+}
+
+void dropTableQuery() :
+{}
+{
+  < DROP >
+  < TABLE >
+  tableName()
+}
+
+void createTableQuery() :
+{}
+{
+  < CREATE >
+  < TABLE >
+  tableName()
+  tableElementList()
+}
+
+void tableElementList() :
+{}
+{
+  < LEFT_PAREN >
+  tableElement()
+  (
+    < COMMA >
+    tableElement()
+  )*
+  < RIGHT_PAREN >
+}
+
+void tableElement() :
+{
+}
+{
+  columnDefinition()
+| tableConstraintDefinition()
+}
+
+void columnDefinition() :
+{}
+{
+  columnName()
+  dataType()
+  (
+    < NOT >
+    < NULL >
+  )?
+}
+
+void tableConstraintDefinition() :
+{}
+{
+  primaryKeyConstraint()
+| referentialConstraint()
+}
+
+void primaryKeyConstraint() :
+{}
+{
+  < PRIMARY >
+  < KEY >
+  columnNameList()
+}
+
+void referentialConstraint() :
+{}
+{
+  < FOREIGN >
+  < KEY >
+  columnNameList()
+  < REFERENCES >
+  tableName()
+  columnNameList()
+}
+
+void columnNameList() :
+{}
+{
+  < LEFT_PAREN >
+  columnName()
+  (
+    < COMMA >
+    columnName()
+  )*
+  < RIGHT_PAREN >
+}
+
+void dataType() :
+{}
+{
+  < INT >
+| (
+    < CHAR >
+    < LEFT_PAREN >
+    < INT_VALUE >
+    < RIGHT_PAREN >
+  )
+| < DATE >
+}
+
+void tableName() :
+{}
+{
+  < LEGAL_IDENTIFIER >
+}
+
+void columnName() :
+{}
+{
+  < LEGAL_IDENTIFIER >
+}

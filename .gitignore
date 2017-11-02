@@ -1,0 +1,14 @@
+/.settings
+/bin
+/db
+/lib
+.classpath
+.project
+
+/src/DBMSParser.java
+/src/DBMSParserConstants.java
+/src/DBMSParserTokenManager.java
+/src/ParseException.java
+/src/SimpleCharStream.java
+/src/Token.java
+/src/TokenMgrError.java
