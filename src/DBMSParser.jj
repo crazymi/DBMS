@@ -7,6 +7,8 @@ options
 
 PARSER_BEGIN(DBMSParser)
 
+import java.util.ArrayList;
+
 import tazo.Column;
 import tazo.DBMSController;
 import tazo.Table;
@@ -557,34 +559,58 @@ void tableConstraintDefinition(Table t) :
 }
 
 void primaryKeyConstraint(Table t) :
-{}
+{
+  ArrayList<String> l;
+}
 {
   < PRIMARY >
   < KEY >
-  columnNameList()
+  l = columnNameList()
+  {
+    t.addPrimaryKeyConstraint(l);
+  }
 }
 
 void referentialConstraint(Table t) :
-{}
+{
+  ArrayList<String> fl;
+  String n;
+  ArrayList<String> rl;
+}
 {
   < FOREIGN >
   < KEY >
-  columnNameList()
+  fl = columnNameList()
   < REFERENCES >
-  tableName()
-  columnNameList()
+  n = tableName()
+  rl = columnNameList()
+  {
+    t.addReferentialConstraint(fl, n, rl);
+  }
 }
 
-void columnNameList() :
-{}
+ArrayList<String> columnNameList() :
+{
+  String n;
+  ArrayList<String> l = new ArrayList<String>();
+}
 {
   < LEFT_PAREN >
-  columnName()
+  n = columnName()
+  {
+    l.add(n);
+  }    
   (
     < COMMA >
-    columnName()
+    n = columnName()
+    {
+      l.add(n);
+    }
   )*
   < RIGHT_PAREN >
+  {
+    return l;
+  }
 }
 
 void dataType(Column c) :

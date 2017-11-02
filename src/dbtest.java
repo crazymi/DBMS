@@ -100,6 +100,9 @@ public class dbtest {
 	    } while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
 	    if (cursor != null) cursor.close();
 	    System.out.println("-----");
+	    
+	    if (myDatabase != null) myDatabase.close();
+	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
 
 }

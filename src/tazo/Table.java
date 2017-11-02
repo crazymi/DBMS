@@ -9,7 +9,7 @@ public class Table {
 	
 	/* tableConstraintDefinition */
 	// primaryKeyConstraint
-	public boolean has_primary_key_constraint = false;
+	boolean has_primary_key_constraint = false;
 	ArrayList<String> primary_list = new ArrayList<>(); // columnNameList
 	
 	// referentialConstraint
@@ -35,7 +35,15 @@ public class Table {
 		// fail to find
 	}
 	
-	public void addPrimaryKeyConstraint() {
-		
+	public void addPrimaryKeyConstraint(ArrayList<String> list) {
+		has_primary_key_constraint = true;
+		primary_list = list;
+	}
+	
+	public void addReferentialConstraint(ArrayList<String> flist, String fname, ArrayList<String> rlist) {
+		has_reference_constraint = true;
+		foregin_list = flist;
+		foreign_name = fname;
+		reference_list = rlist;		
 	}
 }
