@@ -26,6 +26,12 @@ public class Table {
 				throw new ParseException();
 			}
 		}
+		
+		if(col.type == 2 && col.char_length < 1) {
+			System.out.println(DBMSException.CHAR_LENGTH_ERROR);
+			throw new ParseException();
+		}
+		
 		columnList.add(col);
 	}
 	
@@ -40,7 +46,27 @@ public class Table {
 		// fail to find
 	}
 	
-	public void addPrimaryKeyConstraint(ArrayList<String> list) {
+	public void addPrimaryKeyConstraint(ArrayList<String> list) throws ParseException {
+		// primary key is already defined
+		if(has_primary_key_constraint) {
+			System.out.println(DBMSException.DUPLICATE_PRIMARY_KEY_DEF_ERROR);
+			throw new ParseException();
+		}
+		
+		for(Column c : columnList) {
+			boolean flag = false;
+			for(String n : list) {
+				if(n.equals(c.name)) {
+					flag = true;
+					c.is_not_null = true;
+				}
+			}
+			if(!flag) {
+				// not existing column def
+				throw new ParseException();
+			}
+		}
+		
 		has_primary_key_constraint = true;
 		primary_list = list;
 	}

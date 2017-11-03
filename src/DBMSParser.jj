@@ -465,6 +465,9 @@ void showTablesQuery() :
 {
   < SHOW >
   < TABLES >
+  {
+    ctrl.showTables();
+  }
 }
 
 void descQuery() :
@@ -646,7 +649,7 @@ String tableName() :
 {
   t = < LEGAL_IDENTIFIER >
   {
-    return t.toString();
+    return t.toString().toLowerCase();
   }  
 }
 
@@ -657,6 +660,6 @@ String columnName() :
 {
     t = < LEGAL_IDENTIFIER >
     {
-      return t.toString();
+      return t.toString().toLowerCase();
     }
 }

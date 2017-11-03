@@ -84,5 +84,32 @@ public class DBMSController {
 	    } finally {
 			if(cursor != null) cursor.close();
 		}
+	    
+	    System.out.println("'" + n + "'" + " table is dropped");
+	}
+	
+	public void showTables() throws ParseException {
+		Cursor cursor = mySchema.openCursor(null, null); 
+	    DatabaseEntry foundKey = new DatabaseEntry();
+	    DatabaseEntry foundData = new DatabaseEntry();
+
+	    // if no tables
+	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
+	    	System.out.println(DBMSException.SHOW_TABLES_NO_TABLE);
+	    	throw new ParseException();
+	    }
+	    
+	    System.out.println("----------------");
+		do {
+			try {
+				String keyString = new String(foundKey.getData(), "UTF-8");
+				System.out.println(keyString);
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		} while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
+		System.out.println("----------------");
+		
+		if (cursor != null) cursor.close();
 	}
 }
