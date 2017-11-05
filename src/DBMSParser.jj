@@ -1,7 +1,7 @@
 options
 {
   static = true;
-  DEBUG_PARSER = false;
+  DEBUG_PARSER = true;
   IGNORE_CASE = true;
 }
 

@@ -12,6 +12,8 @@ import com.sleepycat.je.Environment;
 import com.sleepycat.je.EnvironmentConfig;
 import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
+import com.sleepycat.je.Put;
+import com.sleepycat.je.WriteOptions;
 
 public class DBMSController {
 	// Environment & Database define
@@ -130,9 +132,15 @@ public class DBMSController {
 	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
 	    	  String dataString = new String(data.getData(), "UTF-8");
 	    	  target = new Gson().fromJson(dataString, Table.class);
-	    	  if(target.is_referenced_table){
+	    	  if(target.is_referenced_table > 0){
 	    		  System.out.println(DBMSException.getMessage(12, target.name));
 	    		  throw new ParseException("hoho");
+	    	  }
+	    	  for(Column c : target.columnList) {
+	    		  if(c.is_foreign) {
+	    			  Table t = getTableByName(c.reference_table);
+	    			  refUpdate(c.reference_table, -1);
+	    		  }
 	    	  }
 	    	  cursor.delete();
 	      } else { // == NOTFOUND
@@ -181,5 +189,37 @@ public class DBMSController {
 			throw new ParseException("hoho");
 		}
 		tb.introPlease();
+	}
+	
+	public void refUpdate(String n, int diff) {
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+	    Table result = null;
+	    
+	    try {
+	    	cursor = mySchema.openCursor(null, null);
+	    	key = new DatabaseEntry(n.getBytes("UTF-8"));
+	    	data = new DatabaseEntry();
+	    	if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    		String dataString = new String(data.getData(), "UTF-8");
+	    		result = new Gson().fromJson(dataString, Table.class);
+	    		result.is_referenced_table = result.is_referenced_table + diff;
+	    		
+	    		String t2json = new Gson().toJson(result);
+	    		data = new DatabaseEntry(t2json.getBytes("UTF-8"));
+	    		
+	    		// TODO how to overwrite? putCurrent not works
+	    		cursor.delete();
+	    		cursor.put(key, data);
+	    	} else { // == NOTFOUND
+	    		result = null;
+	    	}
+	    } catch (DatabaseException de) {
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} finally {
+			if(cursor != null) cursor.close();
+		}
 	}
 }

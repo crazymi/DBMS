@@ -30,12 +30,10 @@ public class Table {
 	ArrayList<String> primary_list = new ArrayList<>(); // columnNameList
 	
 	// referentialConstraint
-	boolean has_reference_constraint = false;
 	ArrayList<String> foreign_list = new ArrayList<>(); // columnNameList
-	HashMap<String, ArrayList<String>> reference_list = new HashMap<>();
 	
-	public boolean is_referenced_table = false;
-	
+	public int is_referenced_table = 0;
+		
 	transient DBMSController ctrl;
 	
 	public Table(String name, DBMSController ctrl) { this.name = name; this.ctrl = ctrl;}
@@ -130,18 +128,27 @@ public class Table {
 		return false;
 	}
 	
+	public Column getColumn(String n) {
+		for(Column c: columnList) {
+			if(n.equals(c.name)) {
+				return c;
+			}
+		}
+		return null;
+	}
+	
 	public void addReferentialConstraint(ArrayList<String> flist,
 			String fname, ArrayList<String> rlist) throws ParseException {
 		Table ref_table = null;
 		ArrayList<Column> ref_col = null;
 		ArrayList<String> ref_pri = null;
 		
-		if(ctrl.isTableExist(fname)) { // if refer table not exists
+		if(!ctrl.isTableExist(fname)) { // if refer table not exists
 			System.out.println(DBMSException.getMessage(6, null));
 			throw new ParseException("hoho");
 		}
 		
-		if(fname.equals(this.name)) { // Foreign key는 자신과 같은 테이블에 있는 컬럼을 참조할 수 없다.
+		if(fname.equals(this.name)) { // Foreign key�뒗 �옄�떊怨� 媛숈� �뀒�씠釉붿뿉 �엳�뒗 而щ읆�쓣 李몄“�븷 �닔 �뾾�떎.
 			// TODO custom exception msg
 			throw new ParseException("hoho");
 		}
@@ -166,17 +173,42 @@ public class Table {
 			}
 		}
 		
-		has_reference_constraint = true;
+		if(flist.size() != rlist.size()) {
+			System.out.println(DBMSException.getMessage(3, null));
+			throw new ParseException("hoho");
+		}
+		
+		for(int i=0;i<flist.size();i++) {
+			String f = flist.get(i);
+			String r = rlist.get(i);
+			Column fc = this.getColumn(f);
+			Column rc = ref_table.getColumn(r);
+			assert(fc != null && rc != null);
+			
+			if(fc.type != rc.type) {
+				System.out.println(DBMSException.getMessage(3, null));
+				throw new ParseException("hoho");
+			} else if (fc.type == 2 && (fc.char_length != rc.char_length)) {
+				System.out.println(DBMSException.getMessage(3, null));
+				throw new ParseException("hoho");
+			} else {
+				// do nothing
+			}
+		}
+		
 		for(String f : flist) {
 			if(!foreign_list.contains(f))
 				foreign_list.add(f);
 		}
-		/*
-		foregin_list = flist;
-		foreign_name = fname;
-		reference_list = rlist;
-		*/
-		ref_table.is_referenced_table = true;
+		
+		for(int i=0;i<flist.size();i++) {
+			String f = flist.get(i);
+			String r = rlist.get(i);
+			Column fc = this.getColumn(f);
+			this.getColumn(f).addForeign(fname, r);
+		}
+		
+		ctrl.refUpdate(fname, flist.size());
 	}
 	
 	public void introPlease() {
