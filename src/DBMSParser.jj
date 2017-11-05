@@ -34,11 +34,19 @@ public class DBMSParser
       {
         System.out.print(CONSOLE_STR);
         parser.command();
+      } catch (ParseException e) {
+        if(e.getMessage() != "") {
+          System.out.println(e.getMessage());
+        } else {
+          printMessage(PRINT_SYNTAX_ERROR);
+        }
+        DBMSParser.ReInit(System.in);
       }
       catch (Exception e)
       {
-        // printMessage(PRINT_SYNTAX_ERROR);
-//        System.out.println(e);
+        
+        // System.out.println(e);
+        // e.printStackTrace();
 		DBMSParser.ReInit(System.in);
       }
     }
@@ -53,16 +61,16 @@ public class DBMSParser
       	System.out.println("Syntax error");
       	break;
       case PRINT_CREATE_TABLE:
-      	System.out.println("\'CREATE TABLE\' requested");
+      	// System.out.println("\'CREATE TABLE\' requested");
       	break;
       case PRINT_DROP_TABLE:
-      	System.out.println("\'DROP TABLE\' requested");
+      	// System.out.println("\'DROP TABLE\' requested");
       	break;
       case PRINT_DESC:
-      	System.out.println("\'DESC\' requested");
+      	// System.out.println("\'DESC\' requested");
       	break;
       case PRINT_SHOW_TABLES:
-      	System.out.println("\'SHOW TABLES\' requested");
+      	// System.out.println("\'SHOW TABLES\' requested");
       	break;
       case PRINT_SELECT:
       	System.out.println("\'SELECT\' requested");
@@ -471,10 +479,15 @@ void showTablesQuery() :
 }
 
 void descQuery() :
-{}
+{
+  String n;
+}
 {
   < DESC >
-  tableName()
+  n = tableName()
+  {
+    ctrl.descTable(n);
+  }
 }
 
 void dropTableQuery() :
@@ -500,7 +513,7 @@ void createTableQuery() :
   < TABLE >
   s = tableName()
   {
-    t = new Table(s);
+    t = new Table(s, ctrl);
   }
   tableElementList(t)
   {

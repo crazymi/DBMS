@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import com.google.gson.Gson;
 import com.sleepycat.je.Cursor;
@@ -38,32 +39,8 @@ public class DBMSController {
 	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
 	
-	public void createTable(Table t) throws ParseException {
-		Cursor cursor = null;
-	    DatabaseEntry key;
-	    DatabaseEntry data;
-
-	    try {
-	      cursor = mySchema.openCursor(null, null);
-	      key = new DatabaseEntry(t.name.getBytes("UTF-8"));
-	      data = new DatabaseEntry();
-	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
-	    	  System.out.println(DBMSException.TABLE_EXISTENCE_ERROR);
-	    	  // already exist
-	    	  throw new ParseException();
-	      } else { // == NOTFOUND
-	    	  data = new DatabaseEntry((new Gson().toJson(t)).getBytes("UTF-8"));
-	    	  cursor.put(key, data);
-	      }
-	    } catch (DatabaseException de) {
-	    } catch (UnsupportedEncodingException e) {
-	      e.printStackTrace();
-	    } finally {
-			if(cursor != null) cursor.close();
-		}
-	}
-	
-	public void dropTable(String n) throws ParseException {
+	public boolean isTableExist(String n) {
+		boolean flag = false;
 		Cursor cursor = null;
 	    DatabaseEntry key;
 	    DatabaseEntry data;
@@ -73,10 +50,91 @@ public class DBMSController {
 	      key = new DatabaseEntry(n.getBytes("UTF-8"));
 	      data = new DatabaseEntry();
 	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    	  flag = true;
+	      }
+	    } catch (DatabaseException de) {
+	    } catch (UnsupportedEncodingException e) {
+	      e.printStackTrace();
+	    } finally {
+			if(cursor != null) cursor.close();
+		}
+	    
+	    return flag;
+	}
+	
+	public void createTable(Table t) throws ParseException {
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+
+	    try {
+	    	cursor = mySchema.openCursor(null, null);
+		    key = new DatabaseEntry(t.name.getBytes("UTF-8"));
+		    data = new DatabaseEntry();
+		      
+	    	if(isTableExist(t.name)) {
+	    		throw new ParseException(DBMSException.getMessage(7, null));
+	    	} else {
+	    		String t2json = new Gson().toJson(t);
+	    		// System.out.println(t2json);
+	    		data = new DatabaseEntry(t2json.getBytes("UTF-8"));
+		    	cursor.put(key, data);
+	    	}
+	    } catch (DatabaseException de) {
+	    } catch (UnsupportedEncodingException e) {
+	      e.printStackTrace();
+	    } finally {
+			if(cursor != null) cursor.close();
+		}
+	    
+	    System.out.println("'" + t.name + "'" + " table is created");
+	}
+	
+	public Table getTableByName(String n){
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+	    Table result = null;
+	    
+	    try {
+	    	cursor = mySchema.openCursor(null, null);
+	    	key = new DatabaseEntry(n.getBytes("UTF-8"));
+	    	data = new DatabaseEntry();
+	    	if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    		String dataString = new String(data.getData(), "UTF-8");
+	    		result = new Gson().fromJson(dataString, Table.class);
+	    	} else { // == NOTFOUND
+	    		result = null;
+	    	}
+	    } catch (DatabaseException de) {
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} finally {
+			if(cursor != null) cursor.close();
+		}
+	    
+	    return result;
+	}
+	
+	public void dropTable(String n) throws ParseException {
+		Table target = null;
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+
+	    try {
+	      cursor = mySchema.openCursor(null, null);
+	      key = new DatabaseEntry(n.getBytes("UTF-8"));
+	      data = new DatabaseEntry();
+	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    	  String dataString = new String(data.getData(), "UTF-8");
+	    	  target = new Gson().fromJson(dataString, Table.class);
+	    	  if(target.is_referenced_table){
+	    		  throw new ParseException(DBMSException.getMessage(12, target.name));
+	    	  }
 	    	  cursor.delete();
 	      } else { // == NOTFOUND
-	    	  System.out.println(DBMSException.NO_SUCH_TABLE);
-	    	  throw new ParseException();
+	    	  throw new ParseException(DBMSException.getMessage(9, null));
 	      }
 	    } catch (DatabaseException de) {
 	    } catch (UnsupportedEncodingException e) {
@@ -95,8 +153,7 @@ public class DBMSController {
 
 	    // if no tables
 	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
-	    	System.out.println(DBMSException.SHOW_TABLES_NO_TABLE);
-	    	throw new ParseException();
+	    	throw new ParseException(DBMSException.getMessage(8, null));
 	    }
 	    
 	    System.out.println("----------------");
@@ -111,5 +168,13 @@ public class DBMSController {
 		System.out.println("----------------");
 		
 		if (cursor != null) cursor.close();
+	}
+	
+	public void descTable(String n) throws ParseException {
+		Table tb = getTableByName(n);
+		if(tb == null) {
+			throw new ParseException(DBMSException.getMessage(9, null));
+		}
+		tb.introPlease();
 	}
 }

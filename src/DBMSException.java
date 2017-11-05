@@ -14,6 +14,39 @@ public class DBMSException {
 	public static final String NO_SUCH_TABLE = "No such table";
 	public static final String CHAR_LENGTH_ERROR = "Char length should be over 0";
 	
+	public static String getMessage(int id, String msg) {
+		switch (id) {
+		case 0:
+			return SYNTAX_ERROR;
+		case 1:
+			return DUPLICATE_COLUMN_DEF_ERROR;
+		case 2:
+			return DUPLICATE_PRIMARY_KEY_DEF_ERROR;
+		case 3:
+			return REFERENCE_TYPE_ERROR;
+		case 4:
+			return REFERENCE_NON_PRIMARY_KEY_ERROR;
+		case 5:
+			return REFERENCE_COLUMN_EXISTENCE_ERROR;
+		case 6:
+			return REFERENCE_TABLE_EXISTENCE_ERROR;
+		case 7:
+			return TABLE_EXISTENCE_ERROR;
+		case 8:
+			return SHOW_TABLES_NO_TABLE;
+		case 9:
+			return NO_SUCH_TABLE;
+		case 10:
+			return CHAR_LENGTH_ERROR;
+		case 11:
+			return "Create table has failed: '" + msg + "' does not exists in column definition";
+		case 12:
+			return "Drop table has failed: '" + msg +"' is referenced by other table";
+		default:
+			return "";	
+		}
+	}
+	
 	/*
 	CreateTableSuccess(#tableName)	'[#tableName]' table is created
 	
