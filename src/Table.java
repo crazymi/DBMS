@@ -44,12 +44,14 @@ public class Table {
 		for(Column c : columnList) {
 			if(c.name.equals(col.name)) {
 				// already exist column name
-				throw new ParseException(DBMSException.getMessage(1, null));
+				System.out.println(DBMSException.getMessage(1, null));
+				throw new ParseException("hoho");
 			}
 		}
 		
 		if(col.type == 2 && col.char_length < 1) {
-			throw new ParseException(DBMSException.getMessage(10, null));
+			System.out.println(DBMSException.getMessage(10, null));
+			throw new ParseException("hoho");
 		}
 		
 		columnList.add(col);
@@ -69,13 +71,15 @@ public class Table {
 	public void addPrimaryKeyConstraint(ArrayList<String> list) throws ParseException {
 		// primary key is already defined
 		if(has_primary_key_constraint) {
-			throw new ParseException(DBMSException.getMessage(2, null));
+			System.out.println(DBMSException.getMessage(2, null));
+			throw new ParseException("hoho");
 		}
 		
 		ArrayList<String> dup = new ArrayList<>();
 		for(String n : list) {
 			if(dup.contains(n)) { // duplicate primary key
-				throw new ParseException(DBMSException.getMessage(1, null));
+				System.out.println(DBMSException.getMessage(1, null));
+				throw new ParseException("hoho");
 			}
 			boolean flag = false;
 			for(Column c : columnList) {
@@ -85,7 +89,8 @@ public class Table {
 				}
 			}
 			if(!flag) {
-				throw new ParseException(DBMSException.getMessage(11, n));
+				System.out.println(DBMSException.getMessage(11, n));
+				throw new ParseException("hoho");
 			}
 			dup.add(n);
 		}
@@ -132,23 +137,27 @@ public class Table {
 		ArrayList<String> ref_pri = null;
 		
 		if(ctrl.isTableExist(fname)) { // if refer table not exists
-			throw new ParseException(DBMSException.getMessage(6, null));
+			System.out.println(DBMSException.getMessage(6, null));
+			throw new ParseException("hoho");
 		}
 		ref_table = ctrl.getTableByName(fname);
 		
 		
 		for(String f : flist) {
 			if(!this.isColumnExists(f)) {
-				throw new ParseException(DBMSException.getMessage(11, f));
+				System.out.println(DBMSException.getMessage(11, f));
+				throw new ParseException("hoho");
 			}
 		}
 		
 		for(String r : rlist) {
 			if(!ref_table.isColumnExists(r)) {
-				throw new ParseException(DBMSException.getMessage(5, null));
+				System.out.println(DBMSException.getMessage(5, null));
+				throw new ParseException("hoho");
 			}
 			if(!ref_table.isPrimary(r)) {
-				throw new ParseException(DBMSException.getMessage(4, null));
+				System.out.println(DBMSException.getMessage(4, null));
+				throw new ParseException("hoho");
 			}
 		}
 		

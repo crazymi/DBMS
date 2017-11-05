@@ -73,7 +73,8 @@ public class DBMSController {
 		    data = new DatabaseEntry();
 		      
 	    	if(isTableExist(t.name)) {
-	    		throw new ParseException(DBMSException.getMessage(7, null));
+	    		System.out.println(DBMSException.getMessage(7, null));
+	    		throw new ParseException("hoho");
 	    	} else {
 	    		String t2json = new Gson().toJson(t);
 	    		// System.out.println(t2json);
@@ -130,11 +131,13 @@ public class DBMSController {
 	    	  String dataString = new String(data.getData(), "UTF-8");
 	    	  target = new Gson().fromJson(dataString, Table.class);
 	    	  if(target.is_referenced_table){
-	    		  throw new ParseException(DBMSException.getMessage(12, target.name));
+	    		  System.out.println(DBMSException.getMessage(12, target.name));
+	    		  throw new ParseException("hoho");
 	    	  }
 	    	  cursor.delete();
 	      } else { // == NOTFOUND
-	    	  throw new ParseException(DBMSException.getMessage(9, null));
+	    	  System.out.println(DBMSException.getMessage(9, null));
+	    	  throw new ParseException("hoho");
 	      }
 	    } catch (DatabaseException de) {
 	    } catch (UnsupportedEncodingException e) {
@@ -153,7 +156,8 @@ public class DBMSController {
 
 	    // if no tables
 	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
-	    	throw new ParseException(DBMSException.getMessage(8, null));
+	    	System.out.println(DBMSException.getMessage(8, null));
+	    	throw new ParseException("hoho");
 	    }
 	    
 	    System.out.println("----------------");
@@ -173,7 +177,8 @@ public class DBMSController {
 	public void descTable(String n) throws ParseException {
 		Table tb = getTableByName(n);
 		if(tb == null) {
-			throw new ParseException(DBMSException.getMessage(9, null));
+			System.out.println(DBMSException.getMessage(9, null));
+			throw new ParseException("hoho");
 		}
 		tb.introPlease();
 	}
