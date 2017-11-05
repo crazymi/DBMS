@@ -140,6 +140,11 @@ public class Table {
 			System.out.println(DBMSException.getMessage(6, null));
 			throw new ParseException("hoho");
 		}
+		
+		if(fname.equals(this.name)) { // Foreign key는 자신과 같은 테이블에 있는 컬럼을 참조할 수 없다.
+			// TODO custom exception msg
+			throw new ParseException("hoho");
+		}
 		ref_table = ctrl.getTableByName(fname);
 		
 		
