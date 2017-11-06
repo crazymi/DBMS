@@ -1,7 +1,4 @@
 import java.util.ArrayList;
-import java.util.HashMap;
-
-import com.sleepycat.je.dbi.GetMode;
 
 public class Table {
 		
@@ -32,8 +29,18 @@ public class Table {
 	// referentialConstraint
 	ArrayList<String> foreign_list = new ArrayList<>(); // columnNameList
 	
-	public int is_referenced_table = 0;
+	public int referenced_count = 0;
+	
+	class Foreign{
+		String fname;
+		int fsize;
 		
+		Foreign(String fname, int fsize) {this.fname = fname; this.fsize = fsize;}
+	}
+	ArrayList<Foreign> update_list = new ArrayList<>();
+
+	// note that, DBMSController should be transient
+	// means serializer will ignore this.
 	transient DBMSController ctrl;
 	
 	public Table(String name, DBMSController ctrl) { this.name = name; this.ctrl = ctrl;}
@@ -55,6 +62,7 @@ public class Table {
 		columnList.add(col);
 	}
 	
+	// there are no DROP for column...
 	public void dropColumn(String name) {
 		for(Column col : columnList) {
 			if(name.equals(col.name)) {
@@ -73,19 +81,24 @@ public class Table {
 			throw new ParseException("hoho");
 		}
 		
+		// list 'dup' is used for check duplicate primary key definition 
 		ArrayList<String> dup = new ArrayList<>();
 		for(String n : list) {
-			if(dup.contains(n)) { // duplicate primary key
+			if(dup.contains(n)) { // if already defined as primary
 				System.out.println(DBMSException.getMessage(1, null));
 				throw new ParseException("hoho");
 			}
+			
 			boolean flag = false;
+			// primary key should be NOT NULL although not explicitly defined
 			for(Column c : columnList) {
 				if(n.equals(c.name)) {
 					flag = true;
 					c.is_not_null = true;
 				}
 			}
+			
+			// !flag means there are no column named 'n'
 			if(!flag) {
 				System.out.println(DBMSException.getMessage(11, n));
 				throw new ParseException("hoho");
@@ -117,7 +130,6 @@ public class Table {
 		return false;
 	}
 		
-	
 	// return if given name of column is exists or not
 	public boolean isColumnExists(String n) {
 		for(Column c : columnList) {
@@ -137,24 +149,26 @@ public class Table {
 		return null;
 	}
 	
+	// flist : list of referenc'ing' columns
+	// fname : name of referenc'ed' table
+	// rlist : list of referenc'ed' columns
 	public void addReferentialConstraint(ArrayList<String> flist,
 			String fname, ArrayList<String> rlist) throws ParseException {
 		Table ref_table = null;
-		ArrayList<Column> ref_col = null;
-		ArrayList<String> ref_pri = null;
 		
 		if(!ctrl.isTableExist(fname)) { // if refer table not exists
 			System.out.println(DBMSException.getMessage(6, null));
 			throw new ParseException("hoho");
 		}
 		
-		if(fname.equals(this.name)) { // Foreign key�뒗 �옄�떊怨� 媛숈� �뀒�씠釉붿뿉 �엳�뒗 而щ읆�쓣 李몄“�븷 �닔 �뾾�떎.
-			// TODO custom exception msg
+		// self reference?
+		if(fname.equals(this.name)) {
+			System.out.println(DBMSException.getMessage(13, null));
 			throw new ParseException("hoho");
 		}
 		ref_table = ctrl.getTableByName(fname);
 		
-		
+		// check if referencing column is in definition
 		for(String f : flist) {
 			if(!this.isColumnExists(f)) {
 				System.out.println(DBMSException.getMessage(11, f));
@@ -162,6 +176,7 @@ public class Table {
 			}
 		}
 		
+		// check if referenced column is in definition and primary
 		for(String r : rlist) {
 			if(!ref_table.isColumnExists(r)) {
 				System.out.println(DBMSException.getMessage(5, null));
@@ -183,7 +198,11 @@ public class Table {
 			String r = rlist.get(i);
 			Column fc = this.getColumn(f);
 			Column rc = ref_table.getColumn(r);
-			assert(fc != null && rc != null);
+			if(fc == null || rc == null) {
+				System.out.println("DBMS Error");
+				throw new ParseException("hoho");
+			}
+//			assert(fc != null && rc != null);
 			
 			if(fc.type != rc.type) {
 				System.out.println(DBMSException.getMessage(3, null));
@@ -196,21 +215,43 @@ public class Table {
 			}
 		}
 		
+		// check if column is already defined as foreign key
+		// note that, this part is not defined in spec
+		// but should be care
 		for(String f : flist) {
-			if(!foreign_list.contains(f))
+			if(!foreign_list.contains(f)) {
 				foreign_list.add(f);
+			} else {
+				System.out.println(DBMSException.getMessage(14, null));
+				throw new ParseException("hoho");
+				// same foreign key can't references multiple columns
+			}				
 		}
 		
 		for(int i=0;i<flist.size();i++) {
 			String f = flist.get(i);
 			String r = rlist.get(i);
-			Column fc = this.getColumn(f);
 			this.getColumn(f).addForeign(fname, r);
 		}
 		
-		ctrl.refUpdate(fname, flist.size());
+		// refUpdate update the table's referenced count
+		// which used as condition when DROP TABLE sql query
+		update_list.add(new Foreign(fname, flist.size()));
+		
+		/* it is important to do 'lazy update', so below line should be replaced with above one
+		 * and later we should call update() function.
+		 */
+		//ctrl.refUpdate(fname, flist.size());
 	}
 	
+	public void update() {
+		for(Foreign f : update_list) {
+			ctrl.refUpdate(f.fname, f.fsize);
+		}
+	}
+	
+	// print table information 
+	// used for DESC sql query
 	public void introPlease() {
 		System.out.println("-------------------------------------------------");
 		System.out.println("table_name [" + this.name + "]");

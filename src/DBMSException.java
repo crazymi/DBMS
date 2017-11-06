@@ -13,6 +13,8 @@ public class DBMSException {
 	public static final String SHOW_TABLES_NO_TABLE = "There is no table";
 	public static final String NO_SUCH_TABLE = "No such table";
 	public static final String CHAR_LENGTH_ERROR = "Char length should be over 0";
+	public static final String SELF_REFERENCE_ERROR = "Create table has failed: can't reference self";
+	public static final String DUPLICATE_FOREIGN_KEY_DEF_ERROR = "Create table has failed: same foreign key can't references multiple columns";
 	
 	public static String getMessage(int id, String msg) {
 		switch (id) {
@@ -42,6 +44,10 @@ public class DBMSException {
 			return "Create table has failed: '" + msg + "' does not exists in column definition";
 		case 12:
 			return "Drop table has failed: '" + msg +"' is referenced by other table";
+		case 13:
+			return SELF_REFERENCE_ERROR;
+		case 14:
+			return DUPLICATE_FOREIGN_KEY_DEF_ERROR;
 		default:
 			return "";	
 		}

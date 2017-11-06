@@ -1,11 +1,8 @@
-import java.util.ArrayList;
-import java.util.HashMap;
-
 public class Column
 {		
 	/* columnDefinition */
 	String name = null; // columnName : LEGAL_IDENTIFIER
-	public int type; // dataType : 0 INT 1 CHAR 2 DATE
+	public int type; // dataType : (INT 1) (CHAR 2) (DATE 3)
 	public int char_length = 0;
 	public boolean is_not_null = false;
 	
@@ -21,7 +18,7 @@ public class Column
 	}
 	
 	public void addForeign(String r_table, String r_column) {
-		assert(!is_foreign);
+		//assert(!is_foreign);
 		
 		is_foreign = true;
 		this.reference_table = r_table;

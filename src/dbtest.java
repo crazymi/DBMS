@@ -16,33 +16,10 @@ import com.sleepycat.je.OperationStatus;
 
 public class dbtest {
 
+	// dbtest prints saved schema as JSON format
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		System.out.println("hello world!");
-		System.out.println("column_name\ttype\tnull\tkey");
 
-		test();
-/*
-		
-		String t2json = new Gson().toJson(t);
-		String col2json = new Gson().toJson(col);
-		
-		System.out.println("Table -> json");
-		System.out.println(t2json);
-		
-		System.out.println("Column -> json");
-		System.out.println(col2json);
-		
-		Table nt = new Gson().fromJson(t2json, Table.class);
-		nt.dropColumn("tazo");
-		t2json = new Gson().toJson(nt);
-		System.out.println("dropped");
-		System.out.println(t2json);
-		*/
-	}
-	
-	public static void test()
-	{
 		 // Environment & Database define
 	    Environment myDbEnvironment = null;
 	    Database myDatabase = null;
@@ -60,27 +37,7 @@ public class dbtest {
 	    dbConfig.setSortedDuplicates(true);
 	    myDatabase = myDbEnvironment.openDatabase(null, "schema", dbConfig);
 
-	    /* PUT <K,V > INTO DB */
-	    
-	    
 	    Cursor cursor = null;
-	    /*
-	    DatabaseEntry key;
-	    DatabaseEntry data;
-
-	    try {
-	      cursor = myDatabase.openCursor(null, null);
-	      key = new DatabaseEntry("key".getBytes("UTF-8"));
-	      data = new DatabaseEntry("value".getBytes("UTF-8"));
-	      cursor.put(key, data);
-	    } catch (DatabaseException de) {
-	    } catch (UnsupportedEncodingException e) {
-	      e.printStackTrace();
-	    } finally {
-			if(cursor != null) cursor.close();
-		}
-
-*/
 	    /* GET <K,V > FROM DB */
 	    DatabaseEntry foundKey = new DatabaseEntry();
 	    DatabaseEntry foundData = new DatabaseEntry();
@@ -103,5 +60,5 @@ public class dbtest {
 	    if (myDatabase != null) myDatabase.close();
 	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
-
+	
 }
