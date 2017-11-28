@@ -211,4 +211,88 @@ public class Table {
 			}
 		}
 	}
+
+	public Column getColumnByIndex(int idx)
+	{
+		return columnList.get(idx);
+	}
+
+	// find current table's column by name, if not exists return null
+	public Column getColumnByName(String n)
+	{
+		for (Column c : columnList)
+		{
+			if(c.name == n)
+				return c;
+		}
+		return null;
+	}
+	
+	public boolean insertInto(ArrayList<String> clist, ArrayList<String> vlist) throws ParseException
+	{
+		int lsize = vlist.size();
+		int valtype = 0;
+		String strcol, strval;
+		Column colfind = null;
+		
+		if(clist != null)
+		{
+			// case 14, InsertTypeMismatchError
+			// if number of given column and value is not equal
+			if(lsize != clist.size())
+			{
+				System.out.println(DBMSException.getMessage(14, null));
+				throw new ParseException("hohoho");
+			}
+			
+			for(int i=0;i<lsize;i++)
+			{
+				strcol = clist.get(i);
+				strval = vlist.get(i);
+				// 1 int, 2 char, 3 date
+				valtype = Integer.parseInt(strval.substring(0, 0)); 
+				
+				// case 13, InsertColumnExistenceError
+				if(!this.isColumnExists(strcol) &&
+						(colfind = this.getColumnByName(strcol)) == null)
+				{
+					System.out.println(DBMSException.getMessage(13, strcol));
+					throw new ParseException("hohoho");
+				}
+				
+				// case 14, InsertTypeMismatchError
+				if(colfind.type != valtype)
+				{
+					System.out.println(DBMSException.getMessage(14, null));
+					throw new ParseException("hohoho");
+				}
+				
+				// case 15, InsertColumnNonNullableError
+				if(colfind.is_not_null && strval == null) {
+					System.out.println(DBMSException.getMessage(15, strcol));
+					throw new ParseException("hohoho");
+				}
+				
+				// truncate char string
+				if(valtype == 2 && strval.length() > colfind.char_length)
+					strval = strval.substring(0, colfind.char_length-1);
+				
+				// check primary constraint
+				if(this.isPrimary(strcol))
+				{
+					// check if value is already exists in db
+				}
+				
+				// check foreign constraint
+				if(this.isForeign(strcol))
+				{
+					//
+				}
+			}
+		}
+		else 
+		{
+		}
+		return false;
+	}
 }

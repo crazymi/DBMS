@@ -4,6 +4,7 @@
 /lib
 .classpath
 .project
+.zip
 
 src/DBMSParser.java
 src/DBMSParserConstants.java

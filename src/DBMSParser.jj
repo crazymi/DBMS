@@ -233,42 +233,78 @@ void deleteQuery() :
 }
 
 void insertQuery() :
-{}
+{
+  String s;
+  Table t;
+}
 {
   < INSERT >
   < INTO >
-  tableName()
-  insertColumnsAndSource()
+  s = tableName()
+  {
+    if(!ctrl.isTableExist(s))
+    {
+      System.out.println(DBMSException.getMessage(9, null));
+      throw new ParseException("hoho");
+    }
+    t = ctrl.getTableByName(s);
+  }
+  insertColumnsAndSource(t)
 }
 
-void insertColumnsAndSource() :
-{}
+void insertColumnsAndSource(Table t) :
+{
+  ArrayList<String> clist = null;
+  ArrayList<String> vlist;
+}
 {
   (
-    columnNameList()
+    clist = columnNameList()
   )?
-  valueList()
+  vlist = valueList()
+  {
+    t.insertInto(clist, vlist);
+  }
 }
 
-void valueList() :
+ArrayList<String> valueList() :
 {
+  ArrayList<String> vlist = new ArrayList<String>();
+  String s;
 }
 {
   < VALUES >
   < LEFT_PAREN >
-  value()
+  s = value()
+  {
+    vlist.add(s);
+  }
   (
     < COMMA >
-    value()
+    s = value()
+    {
+      vlist.add(s);
+    }
   )*
   < RIGHT_PAREN >
+  {
+    return vlist;
+  }
 }
 
-void value() :
-{}
+String value() :
+{
+  String s;
+}
 {
   < NULL >
-| comparableValue()
+  {
+    return null;
+  }
+| s = comparableValue()
+{
+  return s;
+}
 }
 
 void selectQuery() :
@@ -432,12 +468,25 @@ void compOperand() :
   )
 }
 
-void comparableValue() :
-{}
+String comparableValue() :
 {
-  < INT_VALUE >
-| < CHAR_STRING >
-| < DATE_VALUE >
+  Token t;
+}
+{
+  (   
+  t = < INT_VALUE >
+  {
+  return "1" + t.toString();
+  }
+| t = < CHAR_STRING >
+  {
+  return "2" + t.toString();
+  }
+| t = < DATE_VALUE >
+  {
+  return "3" + t.toString();
+  }
+  )
 }
 
 void nullOperation() :
