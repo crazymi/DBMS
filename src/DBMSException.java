@@ -13,6 +13,8 @@ public class DBMSException {
 	public static final String SHOW_TABLES_NO_TABLE = "There is no table";
 	public static final String NO_SUCH_TABLE = "No such table";
 	public static final String CHAR_LENGTH_ERROR = "Char length should be over 0";
+	public static final String SELF_REFERENCE_ERROR = "Create table has failed: can't reference self";
+	public static final String DUPLICATE_FOREIGN_KEY_DEF_ERROR = "Create table has failed: same foreign key can't references multiple columns";
 	
 	public static final String INSERT_TYPE_MISMATCH_ERROR = "Insertion has failed: Types are not matched";
 	public static final String INSERT_DUPLICATE_PRIMARY_KEY_ERROR = "Insertion has failed: Primary key duplication";
@@ -45,15 +47,17 @@ public class DBMSException {
 			return "Create table has failed: '" + msg + "' does not exists in column definition";
 		case 12:
 			return "Drop table has failed: '" + msg +"' is referenced by other table";
-		/* below is added at project 1-3 */
 		case 13:
-			return "Insertion has failed: '" + msg + "' does not exist";
+			return SELF_REFERENCE_ERROR;
 		case 14:
-			return INSERT_TYPE_MISMATCH_ERROR;
-		case 15: // InsertColumnNonNullableError
-			return "Insertion has failed: '" + msg + "' is not nullable";
+			return DUPLICATE_FOREIGN_KEY_DEF_ERROR;
+		/* below is added at project 1-3 */
+		case 15:
+			return "Insertion has failed: '" + msg + "' does not exist";
 		case 16:
-			return INSERT_DUPLICATE_PRIMARY_KEY_ERROR;
+			return INSERT_TYPE_MISMATCH_ERROR;
+		case 17: // InsertColumnNonNullableError
+			return "Insertion has failed: '" + msg + "' is not nullable";
 		default:
 			return "";	
 		}

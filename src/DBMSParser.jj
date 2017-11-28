@@ -42,8 +42,8 @@ public class DBMSParser
       }
       catch (Exception e)
       {
-        // System.out.println(e);
-        // e.printStackTrace();
+        System.out.println(e);
+        e.printStackTrace();
 		DBMSParser.ReInit(System.in);
       }
     }
@@ -245,7 +245,7 @@ void insertQuery() :
     if(!ctrl.isTableExist(s))
     {
       System.out.println(DBMSException.getMessage(9, null));
-      throw new ParseException("hoho");
+      throw new ParseException("hohoho");
     }
     t = ctrl.getTableByName(s);
   }

@@ -1,10 +1,11 @@
 /.settings
 /bin
 /db
-/lib
+/lib/je-7.0.6.jar
 .classpath
 .project
 .zip
+/spec
 
 src/DBMSParser.java
 src/DBMSParserConstants.java

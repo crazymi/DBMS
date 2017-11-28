@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 
 import com.google.gson.Gson;
 import com.sleepycat.je.Cursor;
@@ -20,6 +19,18 @@ public class DBMSController {
     
     /* OPENING DB */
 	public DBMSController(){
+		File envDir = new File("db");
+
+		// if the directory(/db) does not exist, create
+		if (!envDir.exists()) {
+		    try{
+		    	envDir.mkdir();
+		    } 
+		    catch(SecurityException se){
+		        System.out.println("Fail to initialize DB file");
+		    }
+		}
+		
 	    // Open Database Environment or if not, create one.
 	    EnvironmentConfig envConfig = new EnvironmentConfig();
 	    envConfig.setAllowCreate(true);
@@ -53,8 +64,9 @@ public class DBMSController {
 	    	  flag = true;
 	      }
 	    } catch (DatabaseException de) {
+	    	de.printStackTrace();
 	    } catch (UnsupportedEncodingException e) {
-	      e.printStackTrace();
+	    	e.printStackTrace();
 	    } finally {
 			if(cursor != null) cursor.close();
 		}
@@ -77,7 +89,7 @@ public class DBMSController {
 	    		throw new ParseException("hoho");
 	    	} else {
 	    		String t2json = new Gson().toJson(t);
-	    		// System.out.println(t2json);
+	    		// keep date as JSON format
 	    		data = new DatabaseEntry(t2json.getBytes("UTF-8"));
 		    	cursor.put(key, data);
 	    	}
@@ -87,6 +99,14 @@ public class DBMSController {
 	    } finally {
 			if(cursor != null) cursor.close();
 		}
+	    
+	    // finally we update reference count
+	    try {
+	    	t.update();
+	    } catch (Exception e) {
+	    	System.out.println("Unexpected error occured while read/write db");
+	    	// e.printStackTrace();
+	    }
 	    
 	    System.out.println("'" + t.name + "'" + " table is created");
 	}
@@ -108,6 +128,7 @@ public class DBMSController {
 	    		result = null;
 	    	}
 	    } catch (DatabaseException de) {
+	    	de.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		} finally {
@@ -130,9 +151,16 @@ public class DBMSController {
 	      if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
 	    	  String dataString = new String(data.getData(), "UTF-8");
 	    	  target = new Gson().fromJson(dataString, Table.class);
-	    	  if(target.is_referenced_table){
+	    	  // can't drop referenced table
+	    	  if(target.referenced_count > 0){
 	    		  System.out.println(DBMSException.getMessage(12, target.name));
 	    		  throw new ParseException("hoho");
+	    	  }
+	    	  for(Column c : target.columnList) {
+	    		  if(c.is_foreign) {
+	    			  // decrease refernced count
+	    			  refUpdate(c.reference_table, -1);
+	    		  }
 	    	  }
 	    	  cursor.delete();
 	      } else { // == NOTFOUND
@@ -140,8 +168,9 @@ public class DBMSController {
 	    	  throw new ParseException("hoho");
 	      }
 	    } catch (DatabaseException de) {
+	    	de.printStackTrace();
 	    } catch (UnsupportedEncodingException e) {
-	      e.printStackTrace();
+	    	e.printStackTrace();
 	    } finally {
 			if(cursor != null) cursor.close();
 		}
@@ -181,5 +210,40 @@ public class DBMSController {
 			throw new ParseException("hoho");
 		}
 		tb.introPlease();
+	}
+	
+	// increase referenced count for 'diff'
+	public void refUpdate(String n, int diff) {
+		Cursor cursor = null;
+	    DatabaseEntry key;
+	    DatabaseEntry data;
+	    Table result = null;
+	    
+	    try {
+	    	cursor = mySchema.openCursor(null, null);
+	    	key = new DatabaseEntry(n.getBytes("UTF-8"));
+	    	data = new DatabaseEntry();
+	    	if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+	    		String dataString = new String(data.getData(), "UTF-8");
+	    		result = new Gson().fromJson(dataString, Table.class);
+	    		result.referenced_count = result.referenced_count + diff;
+	    		
+	    		String t2json = new Gson().toJson(result);
+	    		data = new DatabaseEntry(t2json.getBytes("UTF-8"));
+	    		
+	    		// TODO how to overwrite? putCurrent not works
+	    		// -> just delete and put it again
+	    		cursor.delete();
+	    		cursor.put(key, data);
+	    	} else { // == NOTFOUND
+	    		result = null;
+	    	}
+	    } catch (DatabaseException de) {
+	    	de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} finally {
+			if(cursor != null) cursor.close();
+		}
 	}
 }
