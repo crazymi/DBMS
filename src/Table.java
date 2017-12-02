@@ -11,7 +11,7 @@ import com.sleepycat.je.LockMode;
 import com.sleepycat.je.OperationStatus;
 
 public class Table {
-		
+	
 	String name = null; // tableName : LEGAL_IDENTIFIER
 	ArrayList<Column> columnList = new ArrayList<>(); // tableElementList
 	
@@ -310,37 +310,67 @@ public class Table {
 		}
 		return null;
 	}
-	
-	// cname : column name
-	// cval : column value, prefix char must be type
-	public boolean insertInto(ArrayList<String> clist, ArrayList<String> vlist) throws ParseException
+		
+	// clist : column name list
+	// vlist : value list
+	public void insertInto(ArrayList<String> clist, ArrayList<String> vlist) throws ParseException
 	{
 		int lsize = vlist.size();
 		int valtype = 0;
-		String strcol, strval, result;
+		String strcol, strval;
+		// newclist, newvlist is filled & sorted of clist,vlist
+		// order : following table's columnlist
+		// filled : if no value is given, instead put null
+		ArrayList<String> newclist = new ArrayList<String>();
+		ArrayList<String> newvlist = new ArrayList<String>();
 		Column colfind = null;
 		
 		// if clist exists, make it as column order.
 		if(clist != null)
 		{
-			//TODO column order
+			// case 14, InsertTypeMismatchError
+			// if number of given column and value is not equal
+			if(lsize != clist.size())
+			{
+				System.out.println(DBMSException.getMessage(16, null));
+				throw new ParseException("hohoho");
+			}
+			
+			// sort clist -> newclist (sort with saved order and fill null with non value)
+			int idx = 0;
+			for(Column c : columnList)
+			{
+				newclist.add(c.name);
+				// if given, add given
+				if((idx = clist.indexOf(c.name)) != -1)
+				{
+					newvlist.add(vlist.get(idx));
+				} else {	// no given, add null
+					newvlist.add(null);
+				}
+			}
 		}
-		// case 14, InsertTypeMismatchError
-		// if number of given column and value is not equal
-		if(lsize != clist.size())
+		else 
 		{
-			System.out.println(DBMSException.getMessage(16, null));
-			throw new ParseException("hohoho");
+			for(Column c : columnList)
+			{
+				newclist.add(c.name);
+			}
+			newvlist = vlist;
 		}
 		
+		assert(newclist.size() == newvlist.size());
+		
+		// check basic integrity
+		lsize = newvlist.size();
 		for(int i=0;i<lsize;i++)
 		{
-			strcol = clist.get(i);
-			strval = vlist.get(i);
+			strcol = newclist.get(i);
+			strval = newvlist.get(i);
 			// 1 int, 2 char, 3 date
 			// get first char (type flag)
 			try {
-			valtype = Integer.parseInt(strval.substring(0, 1));
+				valtype = Integer.parseInt(strval.substring(0, 1));
 			} catch (Exception e)
 			{
 				System.out.println(e.getMessage());
@@ -371,23 +401,69 @@ public class Table {
 			// truncate char string
 			if(valtype == 2 && strval.length() > colfind.char_length)
 				strval = strval.substring(0, colfind.char_length-1);
-			
-			// check primary constraint
-			if(this.isPrimary(strcol))
-			{
-				// check if value is already exists in db
+		}
+		
+		ArrayList<ArrayList<String>> beforeRecord = ctrl.readRecords(this.name);
+		// check primary constraint
+		boolean primaryflag = false;
+		ArrayList<Integer> primaryIndex = new ArrayList<Integer>();
+		int iter = 0;
+		for(Column c : columnList) {
+			if(c.is_primary) primaryIndex.add(iter);
+			iter++;
+		}
+
+		for(ArrayList<String> target : beforeRecord)
+		{
+			primaryflag = true;
+			for(int i=0;i<primaryIndex.size();i++) {
+				if(!target.get(i).equals(newvlist.get(i))) {
+					primaryflag = false;
+					continue;
+				}
 			}
 			
-			// check foreign constraint
-			if(this.isForeign(strcol))
+			// if tuple is identical, 
+			// case 18, InsertDuplicatePrimaryKeyError
+			if(primaryflag)
 			{
-				//
+				System.out.println(DBMSException.getMessage(18, null));
+				throw new ParseException("hohoho");
 			}
 		}
 		
-		// if no error while for iteration
-		result = ctrl.parseData2Disk(vlist);
+		// check foreign constraint
+		iter = -1;
+		for(Column c : columnList)
+		{
+			iter++;
+			if(!c.is_foreign) continue;
+			
+			ArrayList<ArrayList<String>> targetRecord = ctrl.readRecords(c.reference_table);
+			Table targetTable = ctrl.getTableByName(c.reference_table);
+			int targetColumnIdx = targetTable.columnList.indexOf(c.reference_column);
+			boolean foreignflag = false;
+			
+			for(ArrayList<String> target : targetRecord)
+			{
+				// compare reference(target) table's column value with 
+				// newvlist's value (iter)
+				if(target.get(targetColumnIdx).equals(newvlist.get(iter))) {
+					foreignflag = true;
+					break; // no need to lookup rest records
+				}
+			}
+			
+			// if there is no matching value, which means ignore constraint
+			// case 19, InsertReferentialIntegrityError
+			if(!foreignflag)
+			{
+				System.out.println(DBMSException.getMessage(19, null));
+				throw new ParseException("hohoho");
+			}
+		}
 		
-		return false;
+		// if all pass for constraint check, INSERT
+		ctrl.insertRecord(this.name, vlist);
 	}
 }

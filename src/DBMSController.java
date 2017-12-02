@@ -18,7 +18,8 @@ import com.sleepycat.je.OperationStatus;
 public class DBMSController {
 	// Environment & Database define
 	Environment myDbEnvironment = null;
-    Database mySchema = null;
+	Database mySchema = null;
+	Database myRecord = null;
     
     /* OPENING DB */
 	public DBMSController(){
@@ -44,12 +45,15 @@ public class DBMSController {
 	    dbConfig.setAllowCreate(true);
 	    dbConfig.setSortedDuplicates(true);
 	    mySchema = myDbEnvironment.openDatabase(null, "schema", dbConfig);
-		
+	    
+    	// Open Database or if not, create one.
+	    myRecord = myDbEnvironment.openDatabase(null, "record", dbConfig);
 	}
 	
 	/* CLOSING DB */
 	public void close() {
 	    if (mySchema != null) mySchema.close();
+	    if (myRecord != null) myRecord.close();
 	    if (myDbEnvironment != null) myDbEnvironment.close();
 	}
 	
@@ -96,14 +100,6 @@ public class DBMSController {
 	    		data = new DatabaseEntry(t2json.getBytes("UTF-8"));
 		    	cursor.put(key, data);
 	    	}
-	    	
-	    	//next is make databaseEntry
-	    	// Open Database or if not, create one.
-		    DatabaseConfig dbConfig = new DatabaseConfig();
-		    dbConfig.setAllowCreate(true);
-		    dbConfig.setSortedDuplicates(true);
-		    Database newTable = myDbEnvironment.openDatabase(null, t.name, dbConfig);
-		    newTable.close();
 	    } catch (DatabaseException de) {
 	    } catch (UnsupportedEncodingException e) {
 	      e.printStackTrace();
@@ -267,7 +263,7 @@ public class DBMSController {
 			// for exampe null with int type value will be in represent as "1 " and it's going to match with regex
 			// also value in valusList must start with type prefix(1 or 2 or 3)
 			if(s == null) sb.append("");
-			else			sb.append(s);
+			else	sb.append(s);
 			
 			sb.append(" ");
 		}
@@ -287,50 +283,65 @@ public class DBMSController {
 				valueList.add(matcher.group(0));
 			}
 		} catch (IllegalStateException e){
-			System.out.println(e.getMessage());
-			return null;
+			e.printStackTrace();
 		} catch (IndexOutOfBoundsException e) {
-			System.out.println(e.getMessage());
-			return null;
+			e.printStackTrace();
 		}
 		return valueList;
 	}
 	
-	
-	
-	public void insertDataIntoTable(String tname, String keyvalue, String tvalue)
+	public ArrayList<ArrayList<String>> readRecords(String tname)
 	{
-		Database target = null;
-		// open table
-		DatabaseConfig dbConfig = new DatabaseConfig();
-		dbConfig.setAllowCreate(true);
-		dbConfig.setSortedDuplicates(true);
-		target = myDbEnvironment.openDatabase(null, tname, dbConfig);
+		Cursor cursor = myRecord.openCursor(null, null); 
+		DatabaseEntry key = null;
+		DatabaseEntry data = null;
+		String dataString = null;
+		ArrayList<ArrayList<String>> recordList = new ArrayList<ArrayList<String>>();
 		
-		// TODO do insertion
+		try {
+			cursor = myRecord.openCursor(null, null);
+			key = new DatabaseEntry(tname.getBytes("UTF-8"));
+			data = new DatabaseEntry();
+			if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+				do {
+					dataString = data.toString();
+					recordList.add(parseDisk2Data(dataString));
+				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
+			}			
+		} catch (DatabaseException de) {
+			de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} finally {
+			if(cursor != null) cursor.close();
+		}
 		
-		// close table
-		target.close();
+		return recordList;
 	}
 	
-	// true if, Value 'cvalue' is exists in Column 'cname' from Table 'tname'
-	// else false
-	// 'cvalue' must include its type as prefix
-	public boolean isDataExistsInTable(String tname, String cname, String cvalue)
+	public void insertRecord(String tname, ArrayList<String> valueList)
 	{
-		Database target = null;
-		boolean result = false;
+		Cursor cursor = null;
+		DatabaseEntry key = null;
+		DatabaseEntry data = null;
+		String dataString = null;
 		
-		// open table
-		DatabaseConfig dbConfig = new DatabaseConfig();
-		dbConfig.setAllowCreate(true);
-		dbConfig.setSortedDuplicates(true);
-		target = myDbEnvironment.openDatabase(null, tname, dbConfig);
-
-		// TODO search
-		
-		// close table
-	    target.close();
-		return result;
+		try {
+			cursor = myRecord.openCursor(null, null);
+			key = new DatabaseEntry(tname.getBytes("UTF-8"));
+			data = new DatabaseEntry();
+			
+			dataString = parseData2Disk(valueList);
+			data = new DatabaseEntry(dataString.getBytes("UTF-8"));
+			cursor.put(key, data);
+		} catch (DatabaseException de) {
+			de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} finally {
+			if(cursor != null) cursor.close();
+		}
 	}
+	
+	
 }
