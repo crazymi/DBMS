@@ -1,6 +1,8 @@
 import java.io.File;
 
 import java.io.UnsupportedEncodingException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseException;
@@ -19,10 +21,20 @@ public class dbtest {
 	// dbtest prints saved schema as JSON format
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
+		String req = "1-1234 2'123dacjd$ bvc# ' 1 2'' 3 31994-41-12 1241 32017-12-42 1+234 ";
+
+		Pattern pattern = Pattern.compile("1[+,-]?[0-9]*\\s|2'[^']*+'\\s|3[[0-9]{4}-[0-9]{2}-[0-9]{2}]*\\s");
+		Matcher matcher = pattern.matcher(req);
+
+		while(matcher.find()) {
+		    System.out.println(matcher.group(0));
+		}
 		
+		/*
 		String str = new String("1234");
 		int intt = Integer.parseInt(str.substring(1, 2));
 		System.out.println(intt);
+		*/
 		// test();
 	}
 	
