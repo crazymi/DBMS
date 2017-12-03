@@ -70,7 +70,7 @@ public class DBMSParser
       	// System.out.println("\'SHOW TABLES\' requested");
       	break;
       case PRINT_SELECT:
-      	System.out.println("\'SELECT\' requested");
+      	// System.out.println("\'SELECT\' requested");
       	break;
       case PRINT_INSERT:
       	System.out.println("\'INSERT\' requested");

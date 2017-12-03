@@ -1,14 +1,4 @@
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-
-import com.google.gson.Gson;
-import com.sleepycat.je.Cursor;
-import com.sleepycat.je.Database;
-import com.sleepycat.je.DatabaseConfig;
-import com.sleepycat.je.DatabaseEntry;
-import com.sleepycat.je.DatabaseException;
-import com.sleepycat.je.LockMode;
-import com.sleepycat.je.OperationStatus;
 
 public class Table {
 	
@@ -441,7 +431,15 @@ public class Table {
 			
 			ArrayList<ArrayList<String>> targetRecord = ctrl.readRecords(c.reference_table);
 			Table targetTable = ctrl.getTableByName(c.reference_table);
-			int targetColumnIdx = targetTable.columnList.indexOf(c.reference_column);
+			int targetColumnIdx = -1;
+			for(Column cc : targetTable.columnList)
+			{
+				targetColumnIdx++;
+				if(cc.name.equals(c.reference_column))
+				{
+					break;
+				}
+			}
 			boolean foreignflag = false;
 			
 			for(ArrayList<String> target : targetRecord)
@@ -465,5 +463,7 @@ public class Table {
 		
 		// if all pass for constraint check, INSERT
 		ctrl.insertRecord(this.name, vlist);
+		// case 20, InsertResult
+		System.out.println(DBMSException.getMessage(20, null));
 	}
 }

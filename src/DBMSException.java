@@ -20,6 +20,8 @@ public class DBMSException {
 	public static final String INSERT_DUPLICATE_PRIMARY_KEY_ERROR = "Insertion has failed: Primary key duplication";
 	public static final String INSERT_REFERENTIAL_INTEGRITY_ERROR = "Insertion has failed: Referential integrity violation";
 	
+	public static final String INSERT_RESULT = "The row is inserted";
+	
 	public static String getMessage(int id, String msg) {
 		switch (id) {
 		case 0:
@@ -63,6 +65,8 @@ public class DBMSException {
 			return INSERT_DUPLICATE_PRIMARY_KEY_ERROR;
 		case 19:
 			return INSERT_REFERENTIAL_INTEGRITY_ERROR;
+		case 20:
+			return INSERT_RESULT;
 		default:
 			return "";	
 		}
