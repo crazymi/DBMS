@@ -222,14 +222,27 @@ int query() :
 }
 
 void deleteQuery() :
-{}
+{
+  String s;
+  Table t;
+  WhereController.MyWhereClause wc = null;
+}
 {
   < DELETE >
   < FROM >
-  tableName()
+  s = tableName()
   (
-    whereClause()
+    wc = whereClause()
   )?
+  {
+    if(!ctrl.isTableExist(s))
+    {
+      System.out.println(DBMSException.getMessage(9, null));
+      throw new ParseException("hohoho");
+    }
+    t = ctrl.getTableByName(s);
+    t.delete(wc);
+  }
 }
 
 void insertQuery() :
@@ -377,61 +390,108 @@ void referedTable() :
   )?
 }
 
-void whereClause() :
-{}
+WhereController.MyWhereClause whereClause() :
+{
+  WhereController.MyWhereClause wc = new WhereController.MyWhereClause();
+  WhereController.BooleanValueExpression bve;
+}
 {
   < WHERE >
-  booleanValueExpression()
+  bve = booleanValueExpression()
+  {
+    wc.setBooleanValueExpression(bve);
+    return wc;
+  }
 }
 
-void booleanValueExpression() :
-{}
+WhereController.BooleanValueExpression booleanValueExpression() :
 {
-  booleanTerm()
+  WhereController.BooleanValueExpression bve = new WhereController.BooleanValueExpression();
+  WhereController.BooleanTerm bt;
+}
+{
+  bt = booleanTerm()
+  {
+    bve.add(bt);
+  }
   (
     < OR >
-    booleanTerm()
+    bt = booleanTerm()
+    {
+      bve.add(bt);
+    }
   )*
+  {
+    return bve;
+  }
 }
 
-void booleanTerm() :
-{}
+WhereController.BooleanTerm booleanTerm() :
 {
-  booleanFactor()
+  WhereController.BooleanTerm bt = new WhereController.BooleanTerm();
+  WhereController.BooleanFactor bf;
+}
+{
+  bf = booleanFactor()
+  {
+    bt.add(bf);
+  }
   (
     < AND >
-    booleanFactor()
+    bf = booleanFactor()
+    {
+      bt.add(bf);
+    }
   )*
+  {
+    return bt;
+  }
 }
 
-void booleanFactor() :
-{}
+WhereController.BooleanFactor booleanFactor() :
+{
+  WhereController.BooleanFactor bf = new WhereController.BooleanFactor();
+}
 {
   (
     < NOT >
+    {
+      bf.setIsNot();
+    }
   )?
-  booleanTest()
+  booleanTest(bf)
+  {
+    return bf;
+  }
 }
 
-void booleanTest() :
+void booleanTest(WhereController.BooleanFactor bf) :
 {}
 {
   (
-    predicate()
-  | parenthesizedBooleanExpression()
+    predicate(bf)
+  | parenthesizedBooleanExpression(bf)
   )
 }
 
-void parenthesizedBooleanExpression() :
-{}
+void parenthesizedBooleanExpression(WhereController.BooleanFactor bf) :
+{
+  WhereController.ParenthesizedBooleanExpression pbe = new WhereController.ParenthesizedBooleanExpression();
+  WhereController.BooleanValueExpression bve;
+}
 {
  < LEFT_PAREN >
- booleanValueExpression()
+ bve = booleanValueExpression()
  < RIGHT_PAREN >
+ {
+   pbe.setBooleanValueExpression(bve);
+   bf.setBooleanTest(pbe);
+ }
 }
 
-void predicate() :
-{}
+void predicate(WhereController.BooleanFactor bf) :
+{
+}
 {
   (
     // A common prefix is : < LEGAL_IDENTIFIER > "."
@@ -439,32 +499,59 @@ void predicate() :
     // above is compiler's recommend, but the common prefix can be 3 tokens as
     // <TABLE NAME > <PERIOD > <COLUMN NAME >,  so we need to lookahead at least 4.
     LOOKAHEAD(4)
-    comparisonPredicate()
-  | nullPredicate()
+    comparisonPredicate(bf)
+  | nullPredicate(bf)
   )
 }
 
-void comparisonPredicate() :
-{}
+void comparisonPredicate(WhereController.BooleanFactor bf) :
 {
-  compOperand()
-  < COMP_OP >
-  compOperand()
+  WhereController.ComparisonPredicate cp = new WhereController.ComparisonPredicate();
+  WhereController.CompOperand lcp = new WhereController.CompOperand();
+  WhereController.CompOperand rcp = new WhereController.CompOperand();
+  Token t;
+}
+{
+  lcp = compOperand()
+  t = < COMP_OP >
+  rcp = compOperand()
+  {
+    cp.setLeft(lcp);
+    cp.setOp(t.toString());
+    cp.setRight(rcp);
+    bf.setBooleanTest(cp);
+  }
 }
 
-void compOperand() :
-{}
+WhereController.CompOperand compOperand() :
 {
-  comparableValue()
+  WhereController.CompOperand cp = new WhereController.CompOperand();
+  String v;
+  String t;
+  String c;
+}
+{
+  v = comparableValue()
+  {
+    cp.setComparableValue(v);
+    return cp;
+  }
 | (
     (
      // common prefixex is <LEGAL_IDENTIFIER >
      // so using a lookahead of 2 or more
       LOOKAHEAD(2)
-      tableName()
+      t = tableName()
       < PERIOD >
+      {
+        cp.setTableName(t);
+      }
     )?
-    columnName()
+    c = columnName()
+    {
+      cp.setColumnName(c);
+      return cp;
+    }
   )
 }
 
@@ -489,28 +576,49 @@ String comparableValue() :
   )
 }
 
-void nullOperation() :
-{}
+boolean nullOperation() :
+{
+  boolean flag = true;
+}
 {
   < IS >
   (
     < NOT >
+    {
+      flag = false;
+    }
   )?
   < NULL >
+  {
+    return flag;
+  }
 }
 
-void nullPredicate() :
-{}
+void nullPredicate(WhereController.BooleanFactor bf) :
+{
+  WhereController.NullPredicate np = new WhereController.NullPredicate();
+  String t;
+  String c;
+  boolean f;
+}
 {
   (
     // common prefixex is <LEGAL_IDENTIFIER >
     // so using a lookahead of 2 or more
     LOOKAHEAD(2)
-    tableName()
+    t = tableName()
     < PERIOD >
+    {
+      np.setTableName(t);
+    }
   )?
-  columnName()
-  nullOperation()
+  c = columnName()
+  f = nullOperation()
+  {
+    np.setColumnName(c);
+    if(f) np.setIsNull();
+    bf.setBooleanTest(np);
+  } 
 }
 
 

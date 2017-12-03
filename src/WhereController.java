@@ -3,28 +3,43 @@ import java.util.ArrayList;
 // <WHERE CLAUSE> ::= where <BOOLEAN VALUE EXPRESSION>
 public class WhereController {
 	
-	public static class MyBoolean{
-		public enum mv {UNKNOWN, TRUE, FALSE}
-		public mv value;
+	public static class MyWhereClause
+	{
+		BooleanValueExpression booleanValueExpression;
 		
-		public MyBoolean(mv value) {this.value = value;}
+		public void setBooleanValueExpression(BooleanValueExpression booleanValueExpression) {this.booleanValueExpression = booleanValueExpression;}
+		
+		public void print()
+		{
+			System.out.println("Where:");
+			booleanValueExpression.print();
+		}
+	}
+	
+	public static class MyBoolean{
+		public static int UNKNOWN = 0;
+		public static int TRUE = 1;
+		public static int FALSE = 2;
+		public int value;
+		
+		public MyBoolean(int value) {this.value = value;}
 		
 		public MyBoolean or(MyBoolean target) {
 			// unknown | ??? = unknown
-			if (this.value == mv.UNKNOWN)
+			if (this.value == UNKNOWN)
 				return this;
 			else // true | ??? = ???
 				return target;
 		}
 		
 		public MyBoolean and(MyBoolean target) {
-			if (this.value == mv.TRUE) // TRUE & ??? = ???
+			if (this.value == TRUE) // TRUE & ??? = ???
 				return target;
-			else if (this.value == mv.FALSE) // FALSE & ??? = FALSE
+			else if (this.value == FALSE) // FALSE & ??? = FALSE
 				return this;
 			else {
 				// UNKNOWN & FALSE = FALSE
-				if (target.value == mv.FALSE) return target;
+				if (target.value == FALSE) return target;
 				// UNKNOWN & TRUE = UNKNOWN & UNKNOWN = UNKNOWN
 				else return this;
 			}
@@ -32,15 +47,15 @@ public class WhereController {
 		
 		public MyBoolean not() {
 			// NOT TRUE = FALSE
-			if (this.value == mv.TRUE) return new MyBoolean(mv.FALSE);
+			if (this.value == TRUE) return new MyBoolean(FALSE);
 			// NOT FALSE = TRUE
-			else if (this.value == mv.FALSE) return new MyBoolean(mv.TRUE);
+			else if (this.value == FALSE) return new MyBoolean(TRUE);
 			// NOT UNKNOWN = UNKNOWN
 			else return this; 
 		}
 		
 		public boolean eval() {
-			if (this.value == mv.TRUE) return true;
+			if (this.value == TRUE) return true;
 			else return false;
 		}
 	}
@@ -50,9 +65,24 @@ public class WhereController {
 		ArrayList<BooleanTerm> booleanTermList;
 		
 		public BooleanValueExpression(){ booleanTermList = new ArrayList<>(); }
+		public void add(BooleanTerm booleanTerm) {booleanTermList.add(booleanTerm);}
 		
 		MyBoolean eval() {
-			return null;
+			MyBoolean flag = new MyBoolean(MyBoolean.FALSE);
+			for(BooleanTerm bt : booleanTermList)
+			{
+				flag = flag.or(bt.eval());
+			}
+			return flag;
+		}
+		
+		public void print()
+		{
+			System.out.println("\tBVE:");
+			for(BooleanTerm bt : booleanTermList)
+			{
+				bt.print();
+			}
 		}
 	}
 	
@@ -61,9 +91,24 @@ public class WhereController {
 		ArrayList<BooleanFactor> booleanFactorList;
 		
 		public BooleanTerm() { booleanFactorList = new ArrayList<>(); }
+		public void add(BooleanFactor booleanFactor) { booleanFactorList.add(booleanFactor);}
 		
 		MyBoolean eval() {
-			return null;
+			MyBoolean flag = new MyBoolean(MyBoolean.TRUE);
+			for(BooleanFactor bf : booleanFactorList)
+			{
+				flag = flag.and(bf.eval());
+			}
+			return flag;
+		}
+		
+		public void print()
+		{
+			System.out.println("\t\tBT:");
+			for(BooleanFactor bf : booleanFactorList)
+			{
+				bf.print();
+			}
 		}
 	}
 	
@@ -72,8 +117,18 @@ public class WhereController {
 		boolean isNot = false;
 		BooleanTest booleanTest;
 		
+		public void setIsNot() {this.isNot = true;}
+		public void setBooleanTest(BooleanTest booleanTest) {this.booleanTest = booleanTest;}
+		
 		MyBoolean eval() {
 			return (isNot ? booleanTest.eval().not() : booleanTest.eval());
+		}
+		
+		public void print()
+		{
+			System.out.println("\t\t\tBF:");
+			if(isNot) System.out.print("NOT "); 
+			booleanTest.print();
 		}
 	}
 	
@@ -81,15 +136,27 @@ public class WhereController {
 	// | <PARENTHESIZED BOOLEAN EXPRESSION>
 	public static abstract class BooleanTest{
 		abstract MyBoolean eval();
+
+		abstract void print();
 	}
 	
 	// <PARENTHESIZED BOOLEAN EXPRESSION> ::= <LEFT PAREN> <BOOLEAN VALUE EXPRESSION> <RIGHT PAREN>
 	public static class ParenthesizedBooleanExpression extends BooleanTest{
 		BooleanValueExpression booleanValueExpression;
 		
+		public void setBooleanValueExpression(BooleanValueExpression booleanValueExpression) {this.booleanValueExpression = booleanValueExpression;}
+		
 		@Override
 		MyBoolean eval() {
 			return booleanValueExpression.eval();
+		}
+		
+		@Override
+		public void print()
+		{
+			System.out.println("\t\t\t\tPBE {");
+			booleanValueExpression.print();
+			System.out.println("\t\t\t\tPBE }");
 		}
 	}
 	
@@ -101,21 +168,35 @@ public class WhereController {
 	
 	// <COMPARISON PREDICATE> ::= <COMP OPERAND> <COMP OP> <COMP OPERAND>
 	public static class ComparisonPredicate extends Predicate{
-		public static enum CompOp{
-			// <, >, =, >=, <=, NEQ
-			RB, LB, EQ, LEB, REB, NEQ
-		}
+		public static String RB = "<";
+		public static String LB = ">";
+		public static String EQ = "=";
+		public static String LEB = ">=";
+		public static String REB = "<=";
+		public static String NEQ = "!=";
 		
-		public CompOp compOp;
+		public String compOp;
 		public CompOperand leftValue;
 		public CompOperand rightValue;
 		
 		public ComparisonPredicate() {}
+		public void setOp(String compOp) {this.compOp=compOp;}
+		public void setLeft(CompOperand leftValue) {this.leftValue=leftValue;}
+		public void setRight(CompOperand rightValue) {this.rightValue=rightValue;}
 
 		@Override
 		MyBoolean eval() {
 			// TODO Auto-generated method stub
 			return null;
+		}
+		
+		@Override
+		void print() {
+			// TODO Auto-generated method stub
+			System.out.println("\t\t\t\t\tCP");
+			leftValue.print();
+			System.out.println("\t\t\t\t\t\t" + compOp);
+			rightValue.print();
 		}
 	}
 	
@@ -123,38 +204,55 @@ public class WhereController {
 	// | [<TABLE NAME> <PERIOD>] <COLUMN NAME>
 	public static class CompOperand{
 		int OperandType; // 0 ComparableValue, 1 ColumnName
-		String comprableValue;
-		String tableName;
-		String columnName;
+		String comparableValue;
+		String tableName = "";
+		String columnName = "";
 		
-		public void initComparableValue(String comprableValue) {
+		public void setComparableValue(String comparableValue) {
 			this.OperandType = 0;
-			this.comprableValue = comprableValue;
+			this.comparableValue = comparableValue;
 		}
 		
-		public void initColumn(String columnName) {
+		public void setTableName(String tableName) {
 			this.OperandType = 1;
-			this.tableName = null;
+			this.tableName = tableName;
+		}
+		
+		public void setColumnName(String columnName) {
+			this.OperandType = 1;
 			this.columnName = columnName;
 		}
 		
-		public void initColumn(String tableName, String columnName) {
-			this.initColumn(columnName);
-			this.tableName = tableName;
+		public void print()
+		{
+			if(this.OperandType == 1) System.out.println("\t\t\t\t\t\t1:" + tableName + " " + columnName);
+			else System.out.println("\t\t\t\t\t\t0:" + comparableValue);
 		}
 	}
 	
 	// <NULL PREDICATE> ::= [<TABLE NAME> <PERIOD>] <COLUMN NAME> <NULL OPERATION>
 	// <NULL OPERATION> ::= is [not] null
 	public static class NullPredicate extends Predicate{
-		String tableName;
-		String columnName;
-		boolean isNull;
+		String tableName = "";
+		String columnName = "";
+		boolean isNull = false;
+		
+		public void setTableName(String tableName) {this.tableName = tableName;}
+		public void setColumnName(String columnName) {this.columnName = columnName;}
+		public void setIsNull() {this.isNull=true;}
 		
 		@Override
 		MyBoolean eval() {
 			// TODO Auto-generated method stub
 			return null;
+		}
+		@Override
+		void print() {
+			// TODO Auto-generated method stub
+			System.out.print("\t\t\t\t\t\t");
+			if(this.isNull) System.out.print("IS NULL "); else System.out.print("IS NOT NULL "); 
+			System.out.print(tableName + " ");
+			System.out.print(columnName + "\n");
 		}
 	}
 	

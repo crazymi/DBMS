@@ -466,4 +466,10 @@ public class Table {
 		// case 20, InsertResult
 		System.out.println(DBMSException.getMessage(20, null));
 	}
+
+
+	public void delete(WhereController.MyWhereClause wc)
+	{
+		// wc.print();
+	}
 }
