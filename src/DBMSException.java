@@ -80,6 +80,10 @@ public class DBMSException {
 			return WHERE_COLUMN_NOT_EXIST; 
 		case 24:
 			return WHERE_AMBIGUOUS_REFERENCE;
+		case 25: // DeleteResult(#count)
+			return msg + " row(s) are deleted";
+		case 26: // DeleteReferentialIntegrityPassed(#count)
+			return msg + " row(s) are not deleted due to referential integrity";
 		default:
 			return "";	
 		}

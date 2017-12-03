@@ -479,18 +479,13 @@ public class Table {
 
 	public void delete(WhereController.MyWhereClause wc) throws ParseException
 	{
-		ArrayList<String> columnNameList = new ArrayList<String>();
-		int deleteCount = 0;
-		for(Column c : columnList)
-			columnNameList.add(c.name);
+		int cnt = 0;
+		// if no where clause, drop all records
+		if(wc == null) cnt = ctrl.deleteAll(this);
+		else cnt = ctrl.deleteRecord(wc,  this);
 		
-		ArrayList<ArrayList<String>> beforeRecord = ctrl.readRecords(this.name);
-		for(ArrayList<String> cvl : beforeRecord)
-		{
-			wc.setEvalArgs(this, columnNameList, cvl, ctrl);
-
-			System.out.printf("%d: %B, %s\n",deleteCount, wc.eval(), ctrl.parseData2Disk(cvl));
-			deleteCount++;
-		}
+		// after deletion
+		System.out.println(DBMSException.getMessage(25, String.valueOf(cnt)));
 	}
+		
 }

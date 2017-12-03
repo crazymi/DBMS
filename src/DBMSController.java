@@ -343,5 +343,252 @@ public class DBMSController {
 		if(cursor != null) cursor.close();
 	}
 	
+	// cascade helper function
+	// where table t. column c
+	// replace all cvalue with null
+	public void cascadeHelper(Table t, String cname, String cvalue)
+	{
+		Cursor cursor = null;
+		Cursor addor = null;
+		DatabaseEntry key = null;
+		DatabaseEntry data = null;
+		String dataString = null;
+		ArrayList<String> valueList = null;
+		
+		int targetIdx = 0;
+		for (Column c : t.columnList)
+		{
+			if(c.name.equals(cname)) break;
+			targetIdx++;
+		}
+		
+		try {
+			cursor = myRecord.openCursor(null, null);			
+			key = new DatabaseEntry(t.name.getBytes("UTF-8"));
+			data = new DatabaseEntry();
+			if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+				do {
+					dataString = new String(data.getData(), "UTF-8");
+					valueList = parseDisk2Data(dataString);
+					// if identical then replace to null
+					if(valueList.get(targetIdx) != null && valueList.get(targetIdx).equals(cvalue))
+					{
+						valueList.set(targetIdx, "null");
+						dataString = parseData2Disk(valueList);
+						data = new DatabaseEntry(dataString.getBytes("UTF-8"));
+						addor = myRecord.openCursor(null, null);
+						cursor.delete();
+						addor.put(key, data);
+						addor.close();
+					}
+				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
+			}			
+		} catch (DatabaseException de) {
+			System.out.println(de.getMessage());
+			de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		if(cursor != null) cursor.close();
+	}
 	
+	public boolean cascadeUpdate(Table t, String cname, String cvalue) throws ParseException
+	{
+		int refCount = t.referenced_count;
+		ArrayList<String> refTableList = new ArrayList<String>();
+		Boolean cascadeFlag = true;
+		// step 1. find all referencing table
+		Cursor cursor = mySchema.openCursor(null, null); 
+	    DatabaseEntry foundKey = new DatabaseEntry();
+	    DatabaseEntry foundData = new DatabaseEntry();
+	    
+	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
+	    	// program can't get into here, because cascadeUpdate is called when there are other tables
+	    	System.out.println("something goes wrong");
+	    	throw new ParseException("hohoho");
+	    }
+    
+		do {
+			try {
+				String keyString = new String(foundKey.getData(), "UTF-8");
+				// note that, self reference is inhibited
+				if(!keyString.equals(t.name))
+				{
+					Table target = getTableByName(keyString);
+					for(Column c : target.columnList)
+					{
+						// found reference column
+						if(c.is_foreign && c.reference_table.equals(t.name))
+						{
+							refCount--;
+							String referedColumn = c.reference_column;
+							// if one of reference column is not nullable,
+							// cascade update fail, reject deletion
+							if(c.is_not_null)
+							{
+								refCount = 0;
+								cascadeFlag = false;
+							}
+						}
+						
+						// mark for faster search in step 2
+						if(!refTableList.contains(target.name))
+							refTableList.add(target.name);
+					}
+				}
+				
+				// searched all reference tables
+				if(refCount <= 0) break;
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		} while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
+		if (cursor != null) cursor.close();
+		
+		// step 2. check cascade option
+		if(!cascadeFlag)
+		{ // Case 2 in referential spec, one of ref column is not nullable
+			return false;
+		}
+		
+		// Case 1. replace all reference value as null
+		cursor = mySchema.openCursor(null, null); 
+	    foundKey = new DatabaseEntry();
+	    foundData = new DatabaseEntry();
+	    
+	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
+	    	// program can't get into here, because cascadeUpdate is called when there are other tables
+	    	System.out.println("something goes wrong");
+	    	throw new ParseException("hohoho");
+	    }
+    
+		do {
+			try {
+				String keyString = new String(foundKey.getData(), "UTF-8");
+
+				// if marked,
+				if(refTableList.contains(keyString))
+				{
+					Table target = getTableByName(keyString);
+					for(Column c : target.columnList)
+					{
+						// if this one, replace null
+						if(c.is_foreign && c.reference_column.equals(cname))
+						{
+							cascadeHelper(target, c.name, cvalue);
+							refCount--;
+						}
+					}
+				}
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+			}
+		} while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
+		if (cursor != null) cursor.close();
+		
+		return true;
+	}
+		
+	// delete records with given wc conditions
+	public int deleteRecord(WhereController.MyWhereClause wc, Table t) throws ParseException
+	{
+		ArrayList<String> columnNameList = new ArrayList<String>();
+		int deleteCount = 0;
+		int failCount = 0;
+		
+		for(Column c : t.columnList)
+			columnNameList.add(c.name);
+		
+		Cursor cursor = null;
+		DatabaseEntry key = null;
+		DatabaseEntry data = null;
+		String dataString = null;
+		ArrayList<String> columnValueList = null;
+		Boolean flag;
+		Boolean cascadeFlag;
+		
+		try {
+			cursor = myRecord.openCursor(null, null);
+			key = new DatabaseEntry(t.name.getBytes("UTF-8"));
+			data = new DatabaseEntry();
+			if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+				do {
+					dataString = new String(data.getData(), "UTF-8");
+					columnValueList = parseDisk2Data(dataString);
+					wc.setEvalArgs(t, columnNameList, columnValueList, this);
+					flag = wc.eval();
+					if(flag)
+					{
+						cascadeFlag = true;
+						// check referential integrity constraints
+						// if this table is referenced by other table
+						if(t.referenced_count > 0)
+						{
+							int idx = 0;
+							for(Column c : t.columnList)
+							{
+								if(c.is_primary)
+								{
+									cascadeFlag = cascadeFlag | cascadeUpdate(t, c.name, columnValueList.get(idx));
+								}
+								idx++;
+							}
+						}
+
+						// if all satisfy conditions, DELETE
+						if(cascadeFlag)
+						{ // true if cascade option 1
+							cursor.delete();
+							deleteCount++;
+						} else 
+						{ // false if cascade option 2
+							failCount++;
+						}
+					}
+					System.out.printf("%B, %s\n", flag, dataString);
+				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
+			}			
+		} catch (DatabaseException de) {
+			System.out.println(de.getMessage());
+			de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		if(cursor != null) cursor.close();
+		
+		// if there is any failure,
+		if (failCount > 0)
+		{
+			System.out.println(DBMSException.getMessage(26, String.valueOf(failCount)));	
+		}
+		
+		return deleteCount;
+	}
+	
+	// delete all rows in table t
+	public int deleteAll(Table t) throws ParseException
+	{
+		Cursor cursor = null;
+		DatabaseEntry key = null;
+		DatabaseEntry data = null;
+		int deleteCount = 0;
+		try {
+			cursor = myRecord.openCursor(null, null);
+			key = new DatabaseEntry(t.name.getBytes("UTF-8"));
+			data = new DatabaseEntry();
+			if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
+				do {
+					cursor.delete();
+					deleteCount++;
+				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
+			}			
+		} catch (DatabaseException de) {
+			de.printStackTrace();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		if(cursor != null) cursor.close();
+		
+		return deleteCount;
+	}
 }
