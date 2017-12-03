@@ -3,14 +3,56 @@ import java.util.ArrayList;
 // <WHERE CLAUSE> ::= where <BOOLEAN VALUE EXPRESSION>
 public class WhereController {
 	
+	public static class MyBoolean{
+		public enum mv {UNKNOWN, TRUE, FALSE}
+		public mv value;
+		
+		public MyBoolean(mv value) {this.value = value;}
+		
+		public MyBoolean or(MyBoolean target) {
+			// unknown | ??? = unknown
+			if (this.value == mv.UNKNOWN)
+				return this;
+			else // true | ??? = ???
+				return target;
+		}
+		
+		public MyBoolean and(MyBoolean target) {
+			if (this.value == mv.TRUE) // TRUE & ??? = ???
+				return target;
+			else if (this.value == mv.FALSE) // FALSE & ??? = FALSE
+				return this;
+			else {
+				// UNKNOWN & FALSE = FALSE
+				if (target.value == mv.FALSE) return target;
+				// UNKNOWN & TRUE = UNKNOWN & UNKNOWN = UNKNOWN
+				else return this;
+			}
+		}
+		
+		public MyBoolean not() {
+			// NOT TRUE = FALSE
+			if (this.value == mv.TRUE) return new MyBoolean(mv.FALSE);
+			// NOT FALSE = TRUE
+			else if (this.value == mv.FALSE) return new MyBoolean(mv.TRUE);
+			// NOT UNKNOWN = UNKNOWN
+			else return this; 
+		}
+		
+		public boolean eval() {
+			if (this.value == mv.TRUE) return true;
+			else return false;
+		}
+	}
+	
 	// <BOOLEAN VALUE EXPRESSION> ::= <BOOLEAN TERM> ( or <BOOLEAN TERM>)*
 	public static class BooleanValueExpression{
 		ArrayList<BooleanTerm> booleanTermList;
 		
 		public BooleanValueExpression(){ booleanTermList = new ArrayList<>(); }
 		
-		boolean eval() {
-			return false;
+		MyBoolean eval() {
+			return null;
 		}
 	}
 	
@@ -20,8 +62,8 @@ public class WhereController {
 		
 		public BooleanTerm() { booleanFactorList = new ArrayList<>(); }
 		
-		boolean eval() {
-			return false;
+		MyBoolean eval() {
+			return null;
 		}
 	}
 	
@@ -30,15 +72,15 @@ public class WhereController {
 		boolean isNot = false;
 		BooleanTest booleanTest;
 		
-		boolean eval() {
-			return (isNot ? !booleanTest.eval() : booleanTest.eval());
+		MyBoolean eval() {
+			return (isNot ? booleanTest.eval().not() : booleanTest.eval());
 		}
 	}
 	
 	// <BOOLEAN TEST> ::= <PREDICATE>
 	// | <PARENTHESIZED BOOLEAN EXPRESSION>
 	public static abstract class BooleanTest{
-		abstract boolean eval();
+		abstract MyBoolean eval();
 	}
 	
 	// <PARENTHESIZED BOOLEAN EXPRESSION> ::= <LEFT PAREN> <BOOLEAN VALUE EXPRESSION> <RIGHT PAREN>
@@ -46,7 +88,7 @@ public class WhereController {
 		BooleanValueExpression booleanValueExpression;
 		
 		@Override
-		boolean eval() {
+		MyBoolean eval() {
 			return booleanValueExpression.eval();
 		}
 	}
@@ -54,7 +96,7 @@ public class WhereController {
 	// <PREDICATE> ::= <COMPARISON PREDICATE>
 	// | <NULL PREDICTE>
 	public static abstract class Predicate extends BooleanTest{
-		abstract boolean eval();
+		abstract MyBoolean eval();
 	}
 	
 	// <COMPARISON PREDICATE> ::= <COMP OPERAND> <COMP OP> <COMP OPERAND>
@@ -71,9 +113,9 @@ public class WhereController {
 		public ComparisonPredicate() {}
 
 		@Override
-		boolean eval() {
+		MyBoolean eval() {
 			// TODO Auto-generated method stub
-			return false;
+			return null;
 		}
 	}
 	
@@ -110,9 +152,9 @@ public class WhereController {
 		boolean isNull;
 		
 		@Override
-		boolean eval() {
+		MyBoolean eval() {
 			// TODO Auto-generated method stub
-			return false;
+			return null;
 		}
 	}
 	
