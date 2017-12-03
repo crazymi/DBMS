@@ -283,7 +283,7 @@ public class DBMSController {
 			while(matcher.find()) {
 				found = matcher.group(0);
 				// remove last char, because regex include \s too.
-				if(found != null) valueList.add(found.substring(0, found.length() - 1));
+				if(!found.equals("null ")) valueList.add(found.substring(0, found.length() - 1));
 				else valueList.add(null);
 			}
 		} catch (IllegalStateException e){

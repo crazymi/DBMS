@@ -41,24 +41,66 @@ public class WhereController {
 		public int value;
 		
 		public MyBoolean(int value) {this.value = value;}
+		public String toString()
+		{
+			switch (value)
+			{
+			case 0:
+				return "UNKNOWN";
+			case 1:
+				return "TRUE";
+			case 2:
+				return "FALSE";
+			default:
+					return "";
+			}
+		}
+		
+		/* unknown operation specification, 03_SQL p26
+		 * OR: (unknown or true)   = true
+		 *     (unknown or false)  = unknown 
+		 *     (unknown or unknown) = unknown
+		 * AND:(true and unknown)  = unknown, 
+		 *     (false and unknown) = false,
+		 *     (unknown and unknown) = unknown
+		 * NOT:(not unknown) = unknown
+		 * 
+		 *  p q AND OR
+		 *  T T  T  T
+		 *  T F  F  T
+		 *  T U  U  T
+		 *  F F  F  F
+		 *  F U  F  U
+		 *  U U  U  U
+		 */
 		
 		public MyBoolean or(MyBoolean target) {
-			// unknown | ??? = unknown
-			if (this.value == UNKNOWN)
+			if (this.value == UNKNOWN) {
+				// U|T = T
+				if(target.value == TRUE) return target;
+				// U|F = U, U|U = U
+				else return this;
+			}
+			else if (this.value == TRUE) { 
+				// T|? = T
 				return this;
-			else // true | ??? = ???
+			} else {
+				// F|? = ?
 				return target;
+			}
 		}
 		
 		public MyBoolean and(MyBoolean target) {
-			if (this.value == TRUE) // TRUE & ??? = ???
+			// T & ? = ?
+			if (this.value == TRUE)
 				return target;
-			else if (this.value == FALSE) // FALSE & ??? = FALSE
+			// F & ? = F
+			else if (this.value == FALSE)
 				return this;
 			else {
-				// UNKNOWN & FALSE = FALSE
+				// U & F = F 
 				if (target.value == FALSE) return target;
-				// UNKNOWN & TRUE = UNKNOWN & UNKNOWN = UNKNOWN
+				// U & T = U, U & U = U
 				else return this;
 			}
 		}
@@ -89,6 +131,8 @@ public class WhereController {
 			MyBoolean flag = new MyBoolean(MyBoolean.FALSE);
 			for(BooleanTerm bt : booleanTermList)
 			{
+				// DEBUG
+				// System.out.print(bt.eval(evalArgs) + " ");
 				flag = flag.or(bt.eval(evalArgs));
 			}
 			return flag;
@@ -115,6 +159,8 @@ public class WhereController {
 			MyBoolean flag = new MyBoolean(MyBoolean.TRUE);
 			for(BooleanFactor bf : booleanFactorList)
 			{
+				// DEBUG
+				// System.out.print(bf.eval(evalArgs) + " ");
 				flag = flag.and(bf.eval(evalArgs));
 			}
 			return flag;
@@ -217,7 +263,7 @@ public class WhereController {
 			String rtype = rstr.substring(0, 1);
 			// if type mismatch,
 			// case 21, WHERE_INCOMPARABLE_ERROR
-			if(ltype != rtype)
+			if(!ltype.equals(rtype))
 			{
 				System.out.println(DBMSException.getMessage(21, null));
 				throw new ParseException("hohoho");
@@ -236,13 +282,13 @@ public class WhereController {
 				cp = lstr.compareTo(rstr);
 			}
 			
-			// cp > 0, left > right, LB>,NEQ!= true, else false
+			// cp > 0, left > right, LB>,LEB>=,NEQ!= true, else false
 			// cp = 0, left = right, EQ=,LEB>=,REB<= true, else false
-			// cp < 0, left < right, RB<,NEQ!= true, else false
+			// cp < 0, left < right, RB<,REB<=,NEQ!= true, else false
 			
 			if(cp > 0)
 			{
-				if(compOp.equals(LB) || compOp.equals(NEQ))
+				if(compOp.equals(LB) || compOp.equals(LEB) ||  compOp.equals(NEQ))
 					return new MyBoolean(MyBoolean.TRUE);
 				else
 					return new MyBoolean(MyBoolean.FALSE);
@@ -253,7 +299,7 @@ public class WhereController {
 				else
 					return new MyBoolean(MyBoolean.FALSE);
 			} else { // cp < 0
-				if(compOp.equals(RB) || compOp.equals(NEQ))
+				if(compOp.equals(RB) || compOp.equals(REB) || compOp.equals(NEQ))
 					return new MyBoolean(MyBoolean.TRUE);
 				else
 					return new MyBoolean(MyBoolean.FALSE);

@@ -488,7 +488,8 @@ public class Table {
 		for(ArrayList<String> cvl : beforeRecord)
 		{
 			wc.setEvalArgs(this, columnNameList, cvl, ctrl);
-			System.out.printf("%d: %B\n",deleteCount, wc.eval());
+
+			System.out.printf("%d: %B, %s\n",deleteCount, wc.eval(), ctrl.parseData2Disk(cvl));
 			deleteCount++;
 		}
 	}
