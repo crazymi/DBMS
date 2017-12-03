@@ -22,6 +22,11 @@ public class DBMSException {
 	
 	public static final String INSERT_RESULT = "The row is inserted";
 	
+	public static final String WHERE_INCOMPARABLE_ERROR = "Where clause try to compare incomparable values";
+	public static final String WHERE_TABLE_NOT_SPECIFIED = "Where clause try to reference tables which are not specified";
+	public static final String WHERE_COLUMN_NOT_EXIST = "Where clause try to reference non existing column";
+	public static final String WHERE_AMBIGUOUS_REFERENCE = "Where clause contains ambiguous reference";
+	
 	public static String getMessage(int id, String msg) {
 		switch (id) {
 		case 0:
@@ -67,6 +72,14 @@ public class DBMSException {
 			return INSERT_REFERENTIAL_INTEGRITY_ERROR;
 		case 20:
 			return INSERT_RESULT;
+		case 21:
+			return WHERE_INCOMPARABLE_ERROR;
+		case 22:
+			return WHERE_TABLE_NOT_SPECIFIED;
+		case 23:
+			return WHERE_COLUMN_NOT_EXIST; 
+		case 24:
+			return WHERE_AMBIGUOUS_REFERENCE;
 		default:
 			return "";	
 		}

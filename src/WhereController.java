@@ -3,11 +3,29 @@ import java.util.ArrayList;
 // <WHERE CLAUSE> ::= where <BOOLEAN VALUE EXPRESSION>
 public class WhereController {
 	
+	public static class EvalArgs
+	{
+		Table table;
+		ArrayList<String> columnNameList;
+		ArrayList<String> valueList;
+		DBMSController ctrl;
+		
+		public EvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl)
+		{this.table = t; this.columnNameList=cnl; this.valueList=vl; this.ctrl=ctrl;}
+	}
+	
 	public static class MyWhereClause
 	{
 		BooleanValueExpression booleanValueExpression;
+		EvalArgs evalArgs = null;
 		
 		public void setBooleanValueExpression(BooleanValueExpression booleanValueExpression) {this.booleanValueExpression = booleanValueExpression;}
+		public void setEvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl) {evalArgs = new EvalArgs(t, cnl, vl, ctrl);}
+		
+		Boolean eval() throws ParseException{
+			assert(evalArgs != null);
+			return booleanValueExpression.eval(evalArgs).eval();
+		}
 		
 		public void print()
 		{
@@ -67,11 +85,11 @@ public class WhereController {
 		public BooleanValueExpression(){ booleanTermList = new ArrayList<>(); }
 		public void add(BooleanTerm booleanTerm) {booleanTermList.add(booleanTerm);}
 		
-		MyBoolean eval() {
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException{
 			MyBoolean flag = new MyBoolean(MyBoolean.FALSE);
 			for(BooleanTerm bt : booleanTermList)
 			{
-				flag = flag.or(bt.eval());
+				flag = flag.or(bt.eval(evalArgs));
 			}
 			return flag;
 		}
@@ -93,11 +111,11 @@ public class WhereController {
 		public BooleanTerm() { booleanFactorList = new ArrayList<>(); }
 		public void add(BooleanFactor booleanFactor) { booleanFactorList.add(booleanFactor);}
 		
-		MyBoolean eval() {
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
 			MyBoolean flag = new MyBoolean(MyBoolean.TRUE);
 			for(BooleanFactor bf : booleanFactorList)
 			{
-				flag = flag.and(bf.eval());
+				flag = flag.and(bf.eval(evalArgs));
 			}
 			return flag;
 		}
@@ -120,8 +138,8 @@ public class WhereController {
 		public void setIsNot() {this.isNot = true;}
 		public void setBooleanTest(BooleanTest booleanTest) {this.booleanTest = booleanTest;}
 		
-		MyBoolean eval() {
-			return (isNot ? booleanTest.eval().not() : booleanTest.eval());
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
+			return (isNot ? booleanTest.eval(evalArgs).not() : booleanTest.eval(evalArgs));
 		}
 		
 		public void print()
@@ -135,7 +153,7 @@ public class WhereController {
 	// <BOOLEAN TEST> ::= <PREDICATE>
 	// | <PARENTHESIZED BOOLEAN EXPRESSION>
 	public static abstract class BooleanTest{
-		abstract MyBoolean eval();
+		abstract MyBoolean eval(EvalArgs evalArgs) throws ParseException;
 
 		abstract void print();
 	}
@@ -147,8 +165,8 @@ public class WhereController {
 		public void setBooleanValueExpression(BooleanValueExpression booleanValueExpression) {this.booleanValueExpression = booleanValueExpression;}
 		
 		@Override
-		MyBoolean eval() {
-			return booleanValueExpression.eval();
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
+			return booleanValueExpression.eval(evalArgs);
 		}
 		
 		@Override
@@ -163,7 +181,7 @@ public class WhereController {
 	// <PREDICATE> ::= <COMPARISON PREDICATE>
 	// | <NULL PREDICTE>
 	public static abstract class Predicate extends BooleanTest{
-		abstract MyBoolean eval();
+		abstract MyBoolean eval(EvalArgs evalArgs) throws ParseException;
 	}
 	
 	// <COMPARISON PREDICATE> ::= <COMP OPERAND> <COMP OP> <COMP OPERAND>
@@ -185,14 +203,65 @@ public class WhereController {
 		public void setRight(CompOperand rightValue) {this.rightValue=rightValue;}
 
 		@Override
-		MyBoolean eval() {
-			// TODO Auto-generated method stub
-			return null;
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
+			String lstr = leftValue.getValue(evalArgs);
+			String rstr = rightValue.getValue(evalArgs);
+			
+			// any comparison with null returns unknown
+			if(lstr == null || rstr == null)
+			{
+				return new MyBoolean(MyBoolean.UNKNOWN);
+			}
+			
+			String ltype = lstr.substring(0, 1);
+			String rtype = rstr.substring(0, 1);
+			// if type mismatch,
+			// case 21, WHERE_INCOMPARABLE_ERROR
+			if(ltype != rtype)
+			{
+				System.out.println(DBMSException.getMessage(21, null));
+				throw new ParseException("hohoho");
+			}
+			
+			int cp = 0; // result of compare
+			if(ltype.equals("1")) // integer compare
+			{
+				int lint = Integer.valueOf(lstr.substring(1));
+				int rint = Integer.valueOf(rstr.substring(1));
+				cp = lint-rint;
+			}
+			else // char, date compare 
+			{
+				// just use default comparer
+				cp = lstr.compareTo(rstr);
+			}
+			
+			// cp > 0, left > right, LB>,NEQ!= true, else false
+			// cp = 0, left = right, EQ=,LEB>=,REB<= true, else false
+			// cp < 0, left < right, RB<,NEQ!= true, else false
+			
+			if(cp > 0)
+			{
+				if(compOp.equals(LB) || compOp.equals(NEQ))
+					return new MyBoolean(MyBoolean.TRUE);
+				else
+					return new MyBoolean(MyBoolean.FALSE);
+			} else if (cp == 0)
+			{
+				if(compOp.equals(EQ) || compOp.equals(LEB) || compOp.equals(REB))
+					return new MyBoolean(MyBoolean.TRUE);
+				else
+					return new MyBoolean(MyBoolean.FALSE);
+			} else { // cp < 0
+				if(compOp.equals(RB) || compOp.equals(NEQ))
+					return new MyBoolean(MyBoolean.TRUE);
+				else
+					return new MyBoolean(MyBoolean.FALSE);
+			}
 		}
 		
 		@Override
 		void print() {
-			// TODO Auto-generated method stub
 			System.out.println("\t\t\t\t\tCP");
 			leftValue.print();
 			System.out.println("\t\t\t\t\t\t" + compOp);
@@ -223,6 +292,32 @@ public class WhereController {
 			this.columnName = columnName;
 		}
 		
+		public String getValue(EvalArgs evalArgs) throws ParseException
+		{
+			// if compValue type, then just return
+			if(OperandType == 0) return comparableValue;
+			
+			// else case, referenced from column
+			// search in current table, just use valuelist
+			if(tableName.equals("") || tableName.equals(evalArgs.table.name))
+			{
+				if(columnName == "") throw new ParseException("hohoho");
+				int idx = evalArgs.columnNameList.indexOf(columnName);
+				// case 23, WHERE_COLUMN_NOT_EXIST
+				if(idx == -1) {
+					System.out.println(DBMSException.getMessage(23, null));
+					throw new ParseException("hohoho");
+				}
+				return evalArgs.valueList.get(idx);
+			}
+			else // if referenced table 
+			{
+				// TODO
+				System.out.println("NOT IMPLEMENTED");
+				throw new ParseException("NO");
+			}
+		}
+		
 		public void print()
 		{
 			if(this.OperandType == 1) System.out.println("\t\t\t\t\t\t1:" + tableName + " " + columnName);
@@ -242,13 +337,25 @@ public class WhereController {
 		public void setIsNull() {this.isNull=true;}
 		
 		@Override
-		MyBoolean eval() {
-			// TODO Auto-generated method stub
-			return null;
+		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
+			if(columnName == "") throw new ParseException("hohoho");
+			int idx = evalArgs.columnNameList.indexOf(columnName);
+			// case 23, WHERE_COLUMN_NOT_EXIST
+			if(idx == -1) {
+				System.out.println(DBMSException.getMessage(23, null));
+				throw new ParseException("hohoho");
+			}
+			
+			if(evalArgs.valueList.get(idx) == null) {
+				if(isNull) return new MyBoolean(MyBoolean.TRUE);
+				else return new MyBoolean(MyBoolean.FALSE);
+			} else {
+				if(isNull) return new MyBoolean(MyBoolean.FALSE);
+				else return new MyBoolean(MyBoolean.TRUE);
+			}
 		}
 		@Override
 		void print() {
-			// TODO Auto-generated method stub
 			System.out.print("\t\t\t\t\t\t");
 			if(this.isNull) System.out.print("IS NULL "); else System.out.print("IS NOT NULL "); 
 			System.out.print(tableName + " ");

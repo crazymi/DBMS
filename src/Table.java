@@ -95,6 +95,7 @@ public class Table {
 				if(n.equals(c.name)) {
 					flag = true;
 					c.is_not_null = true;
+					c.is_primary = true;
 				}
 			}
 			
@@ -318,7 +319,7 @@ public class Table {
 		// if clist exists, make it as column order.
 		if(clist != null)
 		{
-			// case 14, InsertTypeMismatchError
+			// case 16, InsertTypeMismatchError
 			// if number of given column and value is not equal
 			if(lsize != clist.size())
 			{
@@ -349,7 +350,12 @@ public class Table {
 			newvlist = vlist;
 		}
 		
-		assert(newclist.size() == newvlist.size());
+		if(newclist.size() != newvlist.size())
+		{
+			// case 16, InsertTypeMismatchError
+			System.out.println(DBMSException.getMessage(16, null));
+			throw new ParseException("hohoho");
+		}
 		
 		// check basic integrity
 		lsize = newvlist.size();
@@ -357,16 +363,7 @@ public class Table {
 		{
 			strcol = newclist.get(i);
 			strval = newvlist.get(i);
-			// 1 int, 2 char, 3 date
-			// get first char (type flag)
-			try {
-				valtype = Integer.parseInt(strval.substring(0, 1));
-			} catch (Exception e)
-			{
-				System.out.println(e.getMessage());
-				continue;
-			}
-			
+
 			// case 13, InsertColumnExistenceError
 			if(!this.isColumnExists(strcol) ||
 					(colfind = this.getColumnByName(strcol)) == null)
@@ -375,22 +372,33 @@ public class Table {
 				throw new ParseException("hohoho");
 			}
 			
-			// case 14, InsertTypeMismatchError
-			if(colfind.type != valtype)
+			if(strval == null)
 			{
-				System.out.println(DBMSException.getMessage(16, null));
-				throw new ParseException("hohoho");
+				// case 15, InsertColumnNonNullableError
+				if(colfind.is_not_null || colfind.is_primary) {
+					System.out.println(DBMSException.getMessage(17, strcol));
+					throw new ParseException("hohoho");
+				}
+				valtype = colfind.type;
+			} else {
+				// 1 int, 2 char, 3 date
+				// get first char (type flag)
+				valtype = Integer.parseInt(strval.substring(0, 1));
+				// case 14, InsertTypeMismatchError
+				if(colfind.type != valtype)
+				{
+					System.out.println(DBMSException.getMessage(16, null));
+					throw new ParseException("hohoho");
+				}
+				
+				// no need to keep + sign,, 1+???
+				if(valtype == 1 && strval.contains("+"))
+					strval = "1" + strval.substring(2, strval.length());
+				
+				// truncate char string
+				if(valtype == 2 && strval.length() > colfind.char_length)
+					strval = strval.substring(0, colfind.char_length-1);
 			}
-			
-			// case 15, InsertColumnNonNullableError
-			if(colfind.is_not_null && strval == null) {
-				System.out.println(DBMSException.getMessage(17, strcol));
-				throw new ParseException("hohoho");
-			}
-			
-			// truncate char string
-			if(valtype == 2 && strval.length() > colfind.char_length)
-				strval = strval.substring(0, colfind.char_length-1);
 		}
 		
 		ArrayList<ArrayList<String>> beforeRecord = ctrl.readRecords(this.name);
@@ -405,6 +413,7 @@ public class Table {
 
 		for(ArrayList<String> target : beforeRecord)
 		{
+			if(primaryIndex.size() == 0) continue;
 			primaryflag = true;
 			for(int i=0;i<primaryIndex.size();i++) {
 				if(!target.get(i).equals(newvlist.get(i))) {
@@ -462,14 +471,25 @@ public class Table {
 		}
 		
 		// if all pass for constraint check, INSERT
-		ctrl.insertRecord(this.name, vlist);
+		ctrl.insertRecord(this.name, newvlist);
 		// case 20, InsertResult
 		System.out.println(DBMSException.getMessage(20, null));
 	}
 
 
-	public void delete(WhereController.MyWhereClause wc)
+	public void delete(WhereController.MyWhereClause wc) throws ParseException
 	{
-		// wc.print();
+		ArrayList<String> columnNameList = new ArrayList<String>();
+		int deleteCount = 0;
+		for(Column c : columnList)
+			columnNameList.add(c.name);
+		
+		ArrayList<ArrayList<String>> beforeRecord = ctrl.readRecords(this.name);
+		for(ArrayList<String> cvl : beforeRecord)
+		{
+			wc.setEvalArgs(this, columnNameList, cvl, ctrl);
+			System.out.printf("%d: %B\n",deleteCount, wc.eval());
+			deleteCount++;
+		}
 	}
 }

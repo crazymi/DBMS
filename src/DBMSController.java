@@ -131,6 +131,7 @@ public class DBMSController {
 	    	if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
 	    		String dataString = new String(data.getData(), "UTF-8");
 	    		result = new Gson().fromJson(dataString, Table.class);
+	    		result.ctrl = this;
 	    	} else { // == NOTFOUND
 	    		result = null;
 	    	}
@@ -138,9 +139,8 @@ public class DBMSController {
 	    	de.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		} finally {
-			if(cursor != null) cursor.close();
 		}
+		if(cursor != null) cursor.close();
 	    
 	    return result;
 	}
@@ -262,7 +262,7 @@ public class DBMSController {
 			// note that null should be represent as non-character,
 			// for exampe null with int type value will be in represent as "1 " and it's going to match with regex
 			// also value in valusList must start with type prefix(1 or 2 or 3)
-			if(s == null) sb.append("");
+			if(s == null) sb.append("null");
 			else	sb.append(s);
 			
 			sb.append(" ");
@@ -275,12 +275,16 @@ public class DBMSController {
 		Pattern pattern;
 		Matcher matcher;
 		ArrayList<String> valueList = new ArrayList<>();
+		String found;
 		try {
 			// this regex pattern is identical to , '1<INT> or 2<CHAR_STRING> or 3<DATE>' in token matching
-			pattern = Pattern.compile("1[+,-]?[0-9]*\\s|2'[^']*+'\\s|3[[0-9]{4}-[0-9]{2}-[0-9]{2}]*\\s");
+			pattern = Pattern.compile("1[+,-]?[0-9]*\\s|2'[^']*+'\\s|3[[0-9]{4}-[0-9]{2}-[0-9]{2}]*\\s|(null\\s)");
 			matcher = pattern.matcher(tvalue);
 			while(matcher.find()) {
-				valueList.add(matcher.group(0));
+				found = matcher.group(0);
+				// remove last char, because regex include \s too.
+				if(found != null) valueList.add(found.substring(0, found.length() - 1));
+				else valueList.add(null);
 			}
 		} catch (IllegalStateException e){
 			e.printStackTrace();
@@ -292,7 +296,7 @@ public class DBMSController {
 	
 	public ArrayList<ArrayList<String>> readRecords(String tname)
 	{
-		Cursor cursor = myRecord.openCursor(null, null); 
+		Cursor cursor = null;
 		DatabaseEntry key = null;
 		DatabaseEntry data = null;
 		String dataString = null;
@@ -304,7 +308,7 @@ public class DBMSController {
 			data = new DatabaseEntry();
 			if(cursor.getSearchKey(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS) {
 				do {
-					dataString = data.toString();
+					dataString = new String(data.getData(), "UTF-8");
 					recordList.add(parseDisk2Data(dataString));
 				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
 			}			
@@ -312,9 +316,8 @@ public class DBMSController {
 			de.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		} finally {
-			if(cursor != null) cursor.close();
 		}
+		if(cursor != null) cursor.close();
 		
 		return recordList;
 	}
@@ -328,9 +331,7 @@ public class DBMSController {
 		
 		try {
 			cursor = myRecord.openCursor(null, null);
-			key = new DatabaseEntry(tname.getBytes("UTF-8"));
-			data = new DatabaseEntry();
-			
+			key = new DatabaseEntry(tname.getBytes("UTF-8"));	
 			dataString = parseData2Disk(valueList);
 			data = new DatabaseEntry(dataString.getBytes("UTF-8"));
 			cursor.put(key, data);
@@ -338,9 +339,8 @@ public class DBMSController {
 			de.printStackTrace();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-		} finally {
-			if(cursor != null) cursor.close();
 		}
+		if(cursor != null) cursor.close();
 	}
 	
 	
