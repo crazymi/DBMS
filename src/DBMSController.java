@@ -192,6 +192,7 @@ public class DBMSController {
 
 	    // if no tables
 	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
+	    	cursor.close();
 	    	System.out.println(DBMSException.getMessage(8, null));
 	    	throw new ParseException("hoho");
 	    }
@@ -404,6 +405,7 @@ public class DBMSController {
 	    
 	    if(cursor.getFirst(foundKey, foundData, LockMode.DEFAULT) != OperationStatus.SUCCESS) {
 	    	// program can't get into here, because cascadeUpdate is called when there are other tables
+	    	cursor.close();
 	    	System.out.println("something goes wrong");
 	    	throw new ParseException("hohoho");
 	    }
@@ -445,9 +447,11 @@ public class DBMSController {
 		} while (cursor.getNext(foundKey, foundData, LockMode.DEFAULT) == OperationStatus.SUCCESS);
 		if (cursor != null) cursor.close();
 		
+		// System.out.printf("%B\n", cascadeFlag);
 		// step 2. check cascade option
 		if(!cascadeFlag)
 		{ // Case 2 in referential spec, one of ref column is not nullable
+			
 			return false;
 		}
 		
@@ -529,7 +533,7 @@ public class DBMSController {
 							{
 								if(c.is_primary)
 								{
-									cascadeFlag = cascadeFlag | cascadeUpdate(t, c.name, columnValueList.get(idx));
+									cascadeFlag = cascadeFlag &	 cascadeUpdate(t, c.name, columnValueList.get(idx));
 								}
 								idx++;
 							}
@@ -545,7 +549,9 @@ public class DBMSController {
 							failCount++;
 						}
 					}
-					System.out.printf("%B, %s\n", flag, dataString);
+					
+					// DEBUG, print every records
+					// System.out.printf("%B, %s\n", flag, dataString);
 				} while (cursor.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS);	
 			}			
 		} catch (DatabaseException de) {
