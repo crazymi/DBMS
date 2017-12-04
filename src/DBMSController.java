@@ -597,4 +597,43 @@ public class DBMSController {
 		
 		return deleteCount;
 	}
+	
+	// return cartesian product of request tables
+	public ArrayList<ArrayList<String>> cartesianProduct(SelectController.MySelectQuery mySelectQuery)
+	{
+		ArrayList<ArrayList<String>> result = null;
+		// new cnl follows 'tableName.columnName' or 'asName' format
+		ArrayList<String> newColumnNameList = new ArrayList<>();
+		int newColumnNumber = 0;
+		
+		// Step 1. calculate, joined product's number of columns
+		// 			and make newColumnNameList, newColumnNumber
+		// case 1. asterisk -> auto matching
+		// auto matching : if two columns' type and name are identical then count as one
+		// case 2. given -> number of element in msq.SelectList
+		
+		
+		// Step 2. do cartesian product
+		// 
+		
+		return result;
+	}
+	
+	public void selectQuery(SelectController.MySelectQuery mySelectQuery)
+	{
+		// Step 1. do cartesian product for given tables
+		// case 1. two tables -> single function call
+		// case 2. three or more tables -> nested function call
+		
+		// Step 2. resolve where conditions
+		// how? call eval(), evalArgs needs 4 params which are
+		// Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl
+		// t : make virtual table which results of select (on memory)
+		// cnl : result of cartesian product
+		// vl : for iteration of (result of cartesian product)
+		// ctrl : this
+		
+		// note that, wherecontroller doesn't support referencing
+		// so need to handle in all-in-one table, if t.c is refered then find column named t.c in cnl
+	}
 }

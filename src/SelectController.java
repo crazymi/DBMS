@@ -1,6 +1,13 @@
 import java.util.ArrayList;
 
 public class SelectController {
+	public static class MySelectQuery{
+		SelectList selectList;
+		TableExpression tableExpression;
+		
+		public MySelectQuery(SelectList selectList, TableExpression tableExpression)
+		{this.selectList=selectList; this.tableExpression=tableExpression;}
+	}
 	public static class SelectList{
 		boolean isAsterisk = false;
 		ArrayList<SelectedColumn> selectedColumnList = new ArrayList<>();

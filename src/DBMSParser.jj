@@ -321,73 +321,135 @@ String value() :
 }
 
 void selectQuery() :
-{}
+{
+  SelectController.MySelectQuery msq;
+  SelectController.SelectList sl;
+  SelectController.TableExpression te;
+}
 {
   < SELECT >
-  selectList()
-  tableExpression()
+  sl = selectList()
+  te = tableExpression()
+  {
+    msq = new SelectController.MySelectQuery(sl, te);
+    ctrl.selectQuery(msq);
+  }
 }
 
-void selectList() :
-{}
+SelectController.SelectList selectList() :
+{
+  SelectController.SelectList sl = new SelectController.SelectList(); 
+}
 {
   < ASTERISK >
-| selectedColumn()
+  {
+    sl.setAsterisk();
+    return sl;
+  }
+| selectedColumn(sl)
 (
   < COMMA >
-  selectedColumn()
+  selectedColumn(sl)
 )*
+{
+  return sl;
+}
 }
 
-void selectedColumn() :
-{}
+void selectedColumn(SelectController.SelectList sl) :
+{
+  SelectController.SelectedColumn sc = new SelectController.SelectedColumn();
+  String s;
+}
 {
   (
     LOOKAHEAD(2)
-    tableName()
+    s = tableName()
     < PERIOD >
+    {
+      sc.setTableName(s);
+    }
   )?
-  columnName()
+  s = columnName()
+  {
+    sc.setColumnName(s);
+  }
   (
     < AS >
-    columnName()
+    s = columnName()
+    {
+      sc.setAsName(s);
+    }
   )?
+  {
+    sl.add(sc);
+  }
 }
 
-void tableExpression() :
-{}
+SelectController.TableExpression tableExpression() :
 {
-  fromClause()
+  SelectController.TableExpression te = new SelectController.TableExpression();
+  SelectController.FromClause fc;
+  WhereController.MyWhereClause wc;
+}
+{
+  fc = fromClause()
+  {
+    te.setFromClause(fc);
+  }
   (
-    whereClause()
+    wc = whereClause()
+    {
+      te.setWhereClause(wc);
+    }
   )?
+  {
+    return te;
+  }
 }
 
-void fromClause() :
-{}
+SelectController.FromClause fromClause() :
+{
+  SelectController.FromClause fc = new SelectController.FromClause();
+}
 {
   < FROM >
-  tableReferenceList()
+  tableReferenceList(fc)
+  {
+    return fc;
+  }
 }
 
-void tableReferenceList() :
+void tableReferenceList(SelectController.FromClause fc) :
 {}
 {
-  referedTable()
+  referedTable(fc)
   (
     < COMMA >
-    referedTable()
+    referedTable(fc)
   )*
 }
 
-void referedTable() :
-{}
+void referedTable(SelectController.FromClause fc) :
 {
-  tableName()
+  SelectController.ReferedTable rt = new SelectController.ReferedTable();
+  String s;
+}
+{
+  s = tableName()
+  {
+    rt.setTableName(s);
+  }
   (
     < AS >
-    tableName()
+    s = tableName()
+    {
+      rt.setAsName(s);
+    }
   )?
+  {
+    fc.add(rt);
+  }
 }
 
 WhereController.MyWhereClause whereClause() :
