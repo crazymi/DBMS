@@ -520,7 +520,7 @@ public class DBMSController {
 				do {
 					dataString = new String(data.getData(), "UTF-8");
 					columnValueList = parseDisk2Data(dataString);
-					wc.setEvalArgs(t, columnNameList, columnValueList, this);
+					wc.setEvalArgs(t, columnNameList, columnValueList, this, 1);
 					flag = wc.eval();
 					if(flag)
 					{
@@ -599,6 +599,11 @@ public class DBMSController {
 		return deleteCount;
 	}
 	
+	public class Tuple{
+		int x; int y;
+		public Tuple(int x, int y) {this.x=x; this.y=y;}
+	}
+	
 	/*
 	 * create Caretsian Product
 	 * time complexity : O(MN) when m rows X n rows
@@ -608,43 +613,8 @@ public class DBMSController {
 	 * 		outColumnNameList : cnl of result table 
 	 * 		outCartesianTable : table object of result table
 	 */
-	public ArrayList<ArrayList<String>> cartesianProduct(SelectController.MySelectQuery mySelectQuery,
-			ArrayList<String> outColumnNameList,
-			Table outCartesianTable)
-	{
-		ArrayList<ArrayList<String>> outCartesianResult;
-		String firstTable = null;
-		String secondTable = null;
-		// this is only virtual table
-		Table newTable = new Table("cartesian", this);
-
-		// Step 0. resolve table name
-		// in from clause some tables are renamed, so resolves them at selectlist
-		if(myS)
-		
-		
-		// Step 1. calculate, joined product's number of columns
-		if(mySelectQuery.selectList.isAsterisk)
-		{
-			// case 1. asterisk -> auto matching
-			// auto matching : if two columns' type and name are identical then count as one
-		}
-		else
-		{ // assume there are two tables
-			// case 2. given -> number of element in msq.SelectList
-		}
-		
-
-		
-		
-		// Step 3. do cartesian product
-		
-		
-		// Step 4. return
-		return null; //outCartesianResult;
-	}
 	
-	public void selectQuery(SelectController.MySelectQuery mySelectQuery)
+	public void selectQuery(SelectController.MySelectQuery mySelectQuery) throws ParseException
 	{
 		// Step 1. do cartesian product for given tables
 		// case 1. two tables -> single function call
@@ -660,5 +630,212 @@ public class DBMSController {
 		
 		// note that, wherecontroller doesn't support referencing
 		// so need to handle in all-in-one table, if t.c is refered then find column named t.c in cnl
+		
+		ArrayList<String> outColumnNameList = new ArrayList<>();
+		ArrayList<ArrayList<String>> outCartesianResult = new ArrayList<>();
+		ArrayList<String> currentValueList = new ArrayList<>();
+		ArrayList<Integer> searchIdx = new ArrayList<>();
+		
+		// this is only virtual table
+		Table newTable = new Table("cartesian", this);
+		
+		// SELECT sl.scl : T.C as C' | C as C' 
+		// FROM  te.fc : T as T'
+		// WHERE te.wc : T.C | C'
+		
+		// Step 0. get original information from FromClause
+		HashMap<String, Table> originalTableMap = new HashMap<>();
+		HashMap<String, Column> originalColumnMap = new HashMap<>();
+		
+		HashMap<String, Tuple> columnIndexMap = new HashMap<>();
+		
+		ArrayList<String> fullColumnNameList = new ArrayList<>();
+		ArrayList<String> fullValueList = new ArrayList<>();
+		
+		ArrayList<String> tableNameList = new ArrayList<>();
+
+		// search original column
+		int tidx = 0;
+		int cidx = 0;
+		ArrayList<String> dupCheck = new ArrayList<>();
+		ArrayList<String> dup = new ArrayList<>();
+		for(String key : mySelectQuery.tableExpression.fromClause.tableMap.keySet())
+		{
+			String originalTableName = mySelectQuery.tableExpression.fromClause.tableMap.get(key);
+			Table originalTable = getTableByName(originalTableName);
+			// note that, table map contains 'as name' = T' as key
+			originalTableMap.put(key, originalTable);
+			cidx = 0;
+			for(Column c : originalTable.columnList)
+			{
+				// column map save single column as two pairs
+				// 1. T'.C - column
+				// 2. C - column
+				// both can use in next Step		
+				originalColumnMap.put(key + "." + c.name, c);
+				originalColumnMap.put(c.name, c);
+				columnIndexMap.put(key + "." + c.name, new Tuple(tidx, cidx));
+				columnIndexMap.put(c.name, new Tuple(tidx, cidx));
+				cidx++;
+				
+				// dupCheck : unique column name list
+				// dup : duplicated column name list
+				if(dupCheck.contains(c.name))
+					dup.add(c.name);
+				else
+					dupCheck.add(c.name);
+				
+				fullColumnNameList.add(key + "." + c.name);
+				fullValueList.add(null);
+				Column cp = c;
+				cp.name = key + "." + c.name;
+				newTable.addColumn(cp);
+			}
+			searchIdx.add(0);
+			tidx++;
+			tableNameList.add(key);
+		}
+		
+		// Step 1. resolve table name
+		// in from clause some tables are renamed, so resolves them at selectlist
+		for(SelectController.SelectedColumn sc : mySelectQuery.selectList.selectedColumnList)
+		{
+			Column originColumn = null;
+			String tmpName;
+			if(sc.tableName == null)
+			{
+				// C
+				if(sc.asName == null)
+				{
+					// can't resolve, not unique
+					// Case 27, SelectColumnResolveError
+					if(dup.contains(sc.columnName))
+					{
+						System.out.println(DBMSException.getMessage(27, sc.columnName));
+						throw new ParseException("hohoho");
+					}
+					// get table Name
+					sc.tableName = tableNameList.get(columnIndexMap.get(sc.columnName).x);
+					tmpName = sc.tableName + "." + sc.columnName;
+				} else // C as C' 
+				{
+					tmpName = sc.asName;
+				}
+				originColumn = originalColumnMap.get(sc.columnName);
+			}
+			else
+			{
+				// T.C
+				if(sc.asName == null)
+				{
+					tmpName = sc.tableName + "." + sc.columnName;
+				}
+				else // T.C as C'
+				{
+					tmpName = sc.asName;
+				}
+				originColumn = originalColumnMap.get(sc.tableName + "." + sc.columnName);
+			}
+			
+			// rename
+			originColumn.name = tmpName;
+			outColumnNameList.add(tmpName);
+			currentValueList.add("null");
+		}
+		// now, t and cnl is created
+		
+		
+		// Step 1. calculate, joined product's number of columns
+		if(mySelectQuery.selectList.isAsterisk)
+		{
+			// case 1. asterisk -> auto matching
+			// auto matching : if two columns' type and name are identical then count as one
+		}
+		// case 2. given -> number of element in msq.SelectList
+		
+		// Step 3. do cartesian product
+		// searchIdx = (p,q,r,...) tuples which represents
+		// p'th in T1, q'th in T2, r'th in T3
+		
+		// all records table
+		ArrayList<ArrayList<ArrayList<String>>> wholeRecords = new ArrayList<>();
+		for(String key : mySelectQuery.tableExpression.fromClause.tableMap.keySet())
+		{
+			wholeRecords.add(readRecords(mySelectQuery.tableExpression.fromClause.tableMap.get(key)));
+		}
+
+		ArrayList<Integer> maxIdx = new ArrayList<>();
+		for(ArrayList<ArrayList<String>> tr : wholeRecords)
+		{
+			maxIdx.add(tr.size()-1);
+		}
+		
+		/*
+		 * ArrayList<ArrayList<String>> outCartesianResult = new ArrayList<>();
+			ArrayList<Integer> searchIdx = new ArrayList<>();
+			ArrayList<String> currentValueList = new ArrayList<>();
+		 */
+		do
+		{
+			// read value
+			for(int j=0;j<fullValueList.size();j++)
+			{
+				String cname = fullColumnNameList.get(j);
+				Tuple ctuple = columnIndexMap.get(cname);
+				// tidx table @ ith rows @ tidx value
+				String cvalue = wholeRecords.get(ctuple.x)
+											.get(searchIdx.get(ctuple.x))
+											.get(ctuple.y);
+				fullValueList.set(j, cvalue);
+			}
+			
+			// eval
+			if(mySelectQuery.tableExpression.whereClause == null)
+			{
+				ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
+				outCartesianResult.add(cpList);
+			}
+			else {
+				mySelectQuery.tableExpression.whereClause.setEvalArgs(newTable, fullColumnNameList, fullValueList, this, 0);
+				if(mySelectQuery.tableExpression.whereClause.eval())
+				{ // if pass
+					ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
+					// System.out.println(parseData2Disk(fullValueList));
+					outCartesianResult.add(cpList);
+				}
+			}
+		} while(getNextIdx(searchIdx, maxIdx));
+		
+		
+		// Step 4. print
+		for(ArrayList<String> vvll : outCartesianResult)
+		{
+			System.out.println(parseData2Disk(vvll));
+		}
+	}
+	
+	// increase cur as 1, until max, return false if max
+	public static boolean getNextIdx(ArrayList<Integer> cur, ArrayList<Integer>max)
+	{
+		int len = cur.size() - 1;
+		cur.set(len, cur.get(len) + 1);
+		for(int i=len;i>=0;i--)
+		{
+			if(max.get(i) < cur.get(i))
+			{
+				if(i == 0)
+				{
+					System.out.println("END");
+					return false;
+				}
+				cur.set(i, 0);
+				cur.set(i-1, cur.get(i-1) + 1);
+			}
+			else
+			{
+				break;
+			}
+		}
+		return true;
 	}
 }

@@ -84,6 +84,10 @@ public class DBMSException {
 			return msg + " row(s) are deleted";
 		case 26: // DeleteReferentialIntegrityPassed(#count)
 			return msg + " row(s) are not deleted due to referential integrity";
+		case 27: // SelectColumnResolveError(#colName)
+			return "Selection has failed: fail to resolve " + msg;
+		case 28: // SelectTableExistenceError(#tableName)
+			return "Selection has failed: " + msg +" does not exist";
 		default:
 			return "";	
 		}

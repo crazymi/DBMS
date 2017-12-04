@@ -35,9 +35,10 @@ public class DBMSParser
         System.out.print(CONSOLE_STR);
         parser.command();
       } catch (ParseException e) {
-        if(e.getMessage() != "hoho") {
+        if(!e.getMessage().equals("hoho") && !e.getMessage().equals("hohoho")) {
           printMessage(PRINT_SYNTAX_ERROR);
         }
+        e.printStackTrace();
         DBMSParser.ReInit(System.in);
       }
       catch (Exception e)

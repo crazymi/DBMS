@@ -9,9 +9,10 @@ public class WhereController {
 		ArrayList<String> columnNameList;
 		ArrayList<String> valueList;
 		DBMSController ctrl;
+		int type; // 0 for select 1 for delete
 		
-		public EvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl)
-		{this.table = t; this.columnNameList=cnl; this.valueList=vl; this.ctrl=ctrl;}
+		public EvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl, int type)
+		{this.table = t; this.columnNameList=cnl; this.valueList=vl; this.ctrl=ctrl; this.type=type;}
 	}
 	
 	public static class MyWhereClause
@@ -20,7 +21,7 @@ public class WhereController {
 		EvalArgs evalArgs = null;
 		
 		public void setBooleanValueExpression(BooleanValueExpression booleanValueExpression) {this.booleanValueExpression = booleanValueExpression;}
-		public void setEvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl) {evalArgs = new EvalArgs(t, cnl, vl, ctrl);}
+		public void setEvalArgs(Table t, ArrayList<String> cnl, ArrayList<String> vl, DBMSController ctrl, int type) {evalArgs = new EvalArgs(t, cnl, vl, ctrl, type);}
 		
 		Boolean eval() throws ParseException{
 			assert(evalArgs != null);
@@ -343,24 +344,69 @@ public class WhereController {
 			// if compValue type, then just return
 			if(OperandType == 0) return comparableValue;
 			
-			// else case, referenced from column
-			// search in current table, just use valuelist
-			if(tableName.equals("") || tableName.equals(evalArgs.table.name))
+			if(evalArgs.type == 1) // DELETE
 			{
-				if(columnName == "") throw new ParseException("hohoho");
-				int idx = evalArgs.columnNameList.indexOf(columnName);
-				// case 23, WHERE_COLUMN_NOT_EXIST
-				if(idx == -1) {
-					System.out.println(DBMSException.getMessage(23, null));
+				if(tableName.equals("") || tableName.equals(evalArgs.table.name))
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					int idx = evalArgs.columnNameList.indexOf(columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+					return evalArgs.valueList.get(idx);
+				} else
+				{
+					// when tableName exists and not equal to given table
+					// Case 22, WHERE_TABLE_NOT_SPECIFIED
+					System.out.println(DBMSException.getMessage(22, null));
 					throw new ParseException("hohoho");
 				}
-				return evalArgs.valueList.get(idx);
 			}
-			else // if referenced table 
+			else // SELECT 
 			{
-				// TODO
-				System.out.println("NOT IMPLEMENTED");
-				throw new ParseException("NO");
+				if(tableName.equals(""))
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					
+					// need table guessing
+					for(String s : evalArgs.columnNameList)
+					{
+						if(s.contains("." + columnName))
+						{
+							columnName = s;
+							break;
+						}
+					}
+					
+					// if fail to guess
+					// Case 24, WHERE_AMBIGUOUS_REFERENCE
+					if(!columnName.contains("."))
+					{
+						System.out.println(DBMSException.getMessage(24, null));
+						throw new ParseException("hohoho");
+					}
+					
+					int idx = evalArgs.columnNameList.indexOf(columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+					return evalArgs.valueList.get(idx);
+				}
+				else
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					int idx = evalArgs.columnNameList.indexOf(tableName + "." + columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+					return evalArgs.valueList.get(idx);
+				}
 			}
 		}
 		
@@ -385,19 +431,91 @@ public class WhereController {
 		@Override
 		MyBoolean eval(EvalArgs evalArgs) throws ParseException {
 			if(columnName == "") throw new ParseException("hohoho");
-			int idx = evalArgs.columnNameList.indexOf(columnName);
-			// case 23, WHERE_COLUMN_NOT_EXIST
-			if(idx == -1) {
-				System.out.println(DBMSException.getMessage(23, null));
-				throw new ParseException("hohoho");
-			}
 			
-			if(evalArgs.valueList.get(idx) == null) {
-				if(isNull) return new MyBoolean(MyBoolean.TRUE);
-				else return new MyBoolean(MyBoolean.FALSE);
-			} else {
-				if(isNull) return new MyBoolean(MyBoolean.FALSE);
-				else return new MyBoolean(MyBoolean.TRUE);
+			if(evalArgs.type == 1) // DELETE
+			{
+				if(tableName.equals("") || tableName.equals(evalArgs.table.name))
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					int idx = evalArgs.columnNameList.indexOf(columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+
+					if(evalArgs.valueList.get(idx) == null) {
+						if(isNull) return new MyBoolean(MyBoolean.TRUE);
+						else return new MyBoolean(MyBoolean.FALSE);
+					} else {
+						if(isNull) return new MyBoolean(MyBoolean.FALSE);
+						else return new MyBoolean(MyBoolean.TRUE);
+					}
+				} else
+				{
+					// when tableName exists and not equal to given table
+					// Case 22, WHERE_TABLE_NOT_SPECIFIED
+					System.out.println(DBMSException.getMessage(22, null));
+					throw new ParseException("hohoho");
+				}
+			}
+			else // SELECT 
+			{
+				if(tableName.equals(""))
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					
+					// need table guessing
+					for(String s : evalArgs.columnNameList)
+					{
+						if(s.contains("." + columnName))
+						{
+							columnName = s;
+							break;
+						}
+					}
+					
+					// if fail to guess
+					// Case 24, WHERE_AMBIGUOUS_REFERENCE
+					if(!columnName.contains("."))
+					{
+						System.out.println(DBMSException.getMessage(24, null));
+						throw new ParseException("hohoho");
+					}
+					
+					int idx = evalArgs.columnNameList.indexOf(columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+
+					if(evalArgs.valueList.get(idx) == null) {
+						if(isNull) return new MyBoolean(MyBoolean.TRUE);
+						else return new MyBoolean(MyBoolean.FALSE);
+					} else {
+						if(isNull) return new MyBoolean(MyBoolean.FALSE);
+						else return new MyBoolean(MyBoolean.TRUE);
+					}
+				}
+				else
+				{
+					if(columnName == "") throw new ParseException("hohoho");
+					int idx = evalArgs.columnNameList.indexOf(tableName + "." + columnName);
+					// case 23, WHERE_COLUMN_NOT_EXIST
+					if(idx == -1) {
+						System.out.println(DBMSException.getMessage(23, null));
+						throw new ParseException("hohoho");
+					}
+					
+					if(evalArgs.valueList.get(idx) == null) {
+						if(isNull) return new MyBoolean(MyBoolean.TRUE);
+						else return new MyBoolean(MyBoolean.FALSE);
+					} else {
+						if(isNull) return new MyBoolean(MyBoolean.FALSE);
+						else return new MyBoolean(MyBoolean.TRUE);
+					}
+				}
 			}
 		}
 		@Override
