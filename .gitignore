@@ -2,8 +2,6 @@
 /bin
 /db
 /lib/je-7.0.6.jar
-.classpath
-.project
 .zip
 /spec
 
