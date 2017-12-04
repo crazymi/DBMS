@@ -38,13 +38,13 @@ public class DBMSParser
         if(!e.getMessage().equals("hoho") && !e.getMessage().equals("hohoho")) {
           printMessage(PRINT_SYNTAX_ERROR);
         }
-        e.printStackTrace();
+        // e.printStackTrace();
         DBMSParser.ReInit(System.in);
       }
       catch (Exception e)
       {
         System.out.println(e);
-        e.printStackTrace();
+        // e.printStackTrace();
 		DBMSParser.ReInit(System.in);
       }
     }
@@ -71,7 +71,7 @@ public class DBMSParser
       	// System.out.println("\'SHOW TABLES\' requested");
       	break;
       case PRINT_SELECT:
-      	System.out.println("\'SELECT\' requested");
+      	// System.out.println("\'SELECT\' requested");
       	break;
       case PRINT_INSERT:
       	// System.out.println("\'INSERT\' requested");

@@ -631,9 +631,9 @@ public class DBMSController {
 		// note that, wherecontroller doesn't support referencing
 		// so need to handle in all-in-one table, if t.c is refered then find column named t.c in cnl
 		
+		ArrayList<Integer> outColumnOrderList = new ArrayList<>();
 		ArrayList<String> outColumnNameList = new ArrayList<>();
 		ArrayList<ArrayList<String>> outCartesianResult = new ArrayList<>();
-		ArrayList<String> currentValueList = new ArrayList<>();
 		ArrayList<Integer> searchIdx = new ArrayList<>();
 		
 		// this is only virtual table
@@ -663,6 +663,13 @@ public class DBMSController {
 		{
 			String originalTableName = mySelectQuery.tableExpression.fromClause.tableMap.get(key);
 			Table originalTable = getTableByName(originalTableName);
+			// fail to get table
+			// case 28, SelectTableExistenceError(#tableName)
+			if(originalTable == null)
+			{
+				System.out.println(DBMSException.getMessage(28, originalTableName));
+				throw new ParseException("hohoho");
+			}
 			// note that, table map contains 'as name' = T' as key
 			originalTableMap.put(key, originalTable);
 			cidx = 0;
@@ -739,17 +746,22 @@ public class DBMSController {
 			
 			// rename
 			originColumn.name = tmpName;
+			outColumnOrderList.add(fullColumnNameList.indexOf(sc.tableName + "." + sc.columnName));
 			outColumnNameList.add(tmpName);
-			currentValueList.add("null");
 		}
 		// now, t and cnl is created
-		
-		
+				
 		// Step 1. calculate, joined product's number of columns
 		if(mySelectQuery.selectList.isAsterisk)
 		{
 			// case 1. asterisk -> auto matching
 			// auto matching : if two columns' type and name are identical then count as one
+			int iter = 0;
+			for(String s : fullColumnNameList)
+			{
+				outColumnOrderList.add(iter++);
+				outColumnNameList.add(s);
+			} 
 		}
 		// case 2. given -> number of element in msq.SelectList
 		
@@ -800,7 +812,6 @@ public class DBMSController {
 				if(mySelectQuery.tableExpression.whereClause.eval())
 				{ // if pass
 					ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
-					// System.out.println(parseData2Disk(fullValueList));
 					outCartesianResult.add(cpList);
 				}
 			}
@@ -808,9 +819,99 @@ public class DBMSController {
 		
 		
 		// Step 4. print
+		assert(outColumnNameList.size() == outColumnOrderList.size());
+		
+		ArrayList<Integer> maxSpaceList = new ArrayList<>();
+		for(String s : outColumnNameList)
+			maxSpaceList.add(s.length()-2);
+			
 		for(ArrayList<String> vvll : outCartesianResult)
 		{
-			System.out.println(parseData2Disk(vvll));
+			int iter = 0;
+			for(int i : outColumnOrderList)
+			{
+				String tmp = vvll.get(i);
+				if(tmp == null) tmp = "null";
+				if(tmp.length() > maxSpaceList.get(iter))
+					maxSpaceList.set(iter, tmp.length());
+				iter++;
+			}
+		}
+		
+		// print title
+		for(int l : maxSpaceList)
+		{
+			System.out.print("+");
+			for(int i=0;i<l+2;i++)
+				System.out.print("-");
+		}
+		System.out.print("+");
+		System.out.println();
+		
+		int pad = 0;
+		for(int i=0;i<outColumnNameList.size();i++)
+		{
+			String tmp = outColumnNameList.get(i);
+			tmp = tmp.substring(2, tmp.length());
+			pad = maxSpaceList.get(i) - tmp.length();
+			System.out.print("| ");
+			for(int j=0;j<pad/2;j++)
+				System.out.print(" ");
+			System.out.print(tmp);
+			for(int j=0;j<pad-pad/2+1;j++)
+				System.out.print(" ");
+		}
+		System.out.print("|");
+		System.out.println();
+		
+		for(int l : maxSpaceList)
+		{
+			System.out.print("+");
+			for(int i=0;i<l+2;i++)
+				System.out.print("-");
+		}
+		System.out.print("+");
+		System.out.println();
+		
+		// print data
+		
+		for(ArrayList<String> vvll : outCartesianResult)
+		{
+			for(int i=0;i<outColumnNameList.size();i++)
+			{
+				String tmp = tvalue2string(vvll.get(outColumnOrderList.get(i)));
+				pad = maxSpaceList.get(i) - tmp.length();
+				System.out.print("| ");
+				System.out.print(tmp);
+				for(int j=0;j<pad+1;j++)
+					System.out.print(" ");
+			}
+			System.out.print("|");
+			System.out.println("");
+		}
+		
+		// print close
+		for(int l : maxSpaceList)
+		{
+			System.out.print("+");
+			for(int i=0;i<l+2;i++)
+				System.out.print("-");
+		}
+		System.out.print("+");
+		System.out.println();
+	}
+	
+	public static String tvalue2string(String tvalue)
+	{
+		if(tvalue == null) return "null";
+		int type = Integer.valueOf(tvalue.substring(0, 1));
+		if(type == 2)
+		{
+			return tvalue.substring(2, tvalue.length()-1);
+		}
+		else
+		{
+			return tvalue.substring(1, tvalue.length());
 		}
 	}
 	
@@ -825,7 +926,7 @@ public class DBMSController {
 			{
 				if(i == 0)
 				{
-					System.out.println("END");
+					// System.out.println("END");
 					return false;
 				}
 				cur.set(i, 0);
