@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class SelectController {
 	public static class MySelectQuery{
@@ -27,24 +28,23 @@ public class SelectController {
 	}
 	
 	public static class TableExpression{
-		FromClause fc = null;
-		WhereController.MyWhereClause wc = null;
+		FromClause fromClause = null;
+		WhereController.MyWhereClause whereClause = null;
 		
-		public void setFromClause(FromClause fc) {this.fc=fc;}
-		public void setWhereClause(WhereController.MyWhereClause wc) {this.wc = wc;}
+		public void setFromClause(FromClause fc) {this.fromClause=fc;}
+		public void setWhereClause(WhereController.MyWhereClause wc) {this.whereClause = wc;}
 	}
 	
 	public static class FromClause{
-		ArrayList<ReferedTable> tableReferenceList = new ArrayList<>();
+		HashMap<String, String> tableMap = new HashMap<>();
 		
-		public void add(ReferedTable rt) {tableReferenceList.add(rt);}
-	}
-	
-	public static class ReferedTable{
-		String tableName = null;
-		String asName = null;
-		
-		public void setTableName(String tableName) {this.tableName=tableName;}
-		public void setAsName(String asName) {this.asName=asName;}
+		// note that <K,V> is <as, table>
+		// because most of lookup called by 'asname' which saved in selectList
+		public void add(String tname, String asname)
+		{
+			// if asname not defined, use original
+			if(asname == null) tableMap.put(tname, tname);
+			else tableMap.put(asname, tname);
+		}
 	}
 }

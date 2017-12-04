@@ -1,6 +1,7 @@
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -598,25 +599,49 @@ public class DBMSController {
 		return deleteCount;
 	}
 	
-	// return cartesian product of request tables
-	public ArrayList<ArrayList<String>> cartesianProduct(SelectController.MySelectQuery mySelectQuery)
+	/*
+	 * create Caretsian Product
+	 * time complexity : O(MN) when m rows X n rows
+	 * IN : mySelectQuery
+	 * OUT : 
+	 * 		outCartesianResult : records of result table (return value)
+	 * 		outColumnNameList : cnl of result table 
+	 * 		outCartesianTable : table object of result table
+	 */
+	public ArrayList<ArrayList<String>> cartesianProduct(SelectController.MySelectQuery mySelectQuery,
+			ArrayList<String> outColumnNameList,
+			Table outCartesianTable)
 	{
-		ArrayList<ArrayList<String>> result = null;
-		// new cnl follows 'tableName.columnName' or 'asName' format
-		ArrayList<String> newColumnNameList = new ArrayList<>();
-		int newColumnNumber = 0;
+		ArrayList<ArrayList<String>> outCartesianResult;
+		String firstTable = null;
+		String secondTable = null;
+		// this is only virtual table
+		Table newTable = new Table("cartesian", this);
+
+		// Step 0. resolve table name
+		// in from clause some tables are renamed, so resolves them at selectlist
+		if(myS)
+		
 		
 		// Step 1. calculate, joined product's number of columns
-		// 			and make newColumnNameList, newColumnNumber
-		// case 1. asterisk -> auto matching
-		// auto matching : if two columns' type and name are identical then count as one
-		// case 2. given -> number of element in msq.SelectList
+		if(mySelectQuery.selectList.isAsterisk)
+		{
+			// case 1. asterisk -> auto matching
+			// auto matching : if two columns' type and name are identical then count as one
+		}
+		else
+		{ // assume there are two tables
+			// case 2. given -> number of element in msq.SelectList
+		}
+		
+
 		
 		
-		// Step 2. do cartesian product
-		// 
+		// Step 3. do cartesian product
 		
-		return result;
+		
+		// Step 4. return
+		return null; //outCartesianResult;
 	}
 	
 	public void selectQuery(SelectController.MySelectQuery mySelectQuery)

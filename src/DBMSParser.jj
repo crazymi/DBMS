@@ -432,23 +432,17 @@ void tableReferenceList(SelectController.FromClause fc) :
 
 void referedTable(SelectController.FromClause fc) :
 {
-  SelectController.ReferedTable rt = new SelectController.ReferedTable();
-  String s;
+  String t = null;
+  String s = null;
 }
 {
-  s = tableName()
-  {
-    rt.setTableName(s);
-  }
+  t = tableName()
   (
     < AS >
     s = tableName()
-    {
-      rt.setAsName(s);
-    }
   )?
   {
-    fc.add(rt);
+    fc.add(t, s);
   }
 }
 
