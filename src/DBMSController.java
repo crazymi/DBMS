@@ -771,9 +771,16 @@ public class DBMSController {
 		
 		// all records table
 		ArrayList<ArrayList<ArrayList<String>>> wholeRecords = new ArrayList<>();
+		Boolean toxicFlag = false;
 		for(String key : mySelectQuery.tableExpression.fromClause.tableMap.keySet())
 		{
-			wholeRecords.add(readRecords(mySelectQuery.tableExpression.fromClause.tableMap.get(key)));
+			ArrayList<ArrayList<String>> vlist = readRecords(mySelectQuery.tableExpression.fromClause.tableMap.get(key));
+			if(vlist.size() == 0) {
+				toxicFlag = true;
+				break;
+			}
+				
+			wholeRecords.add(vlist);
 		}
 
 		ArrayList<Integer> maxIdx = new ArrayList<>();
@@ -787,37 +794,39 @@ public class DBMSController {
 			ArrayList<Integer> searchIdx = new ArrayList<>();
 			ArrayList<String> currentValueList = new ArrayList<>();
 		 */
-		do
+		if(!toxicFlag)
 		{
-			// read value
-			for(int j=0;j<fullValueList.size();j++)
+			do
 			{
-				String cname = fullColumnNameList.get(j);
-				Tuple ctuple = columnIndexMap.get(cname);
-				// tidx table @ ith rows @ tidx value
-				String cvalue = wholeRecords.get(ctuple.x)
-											.get(searchIdx.get(ctuple.x))
-											.get(ctuple.y);
-				fullValueList.set(j, cvalue);
-			}
-			
-			// eval
-			if(mySelectQuery.tableExpression.whereClause == null)
-			{
-				ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
-				outCartesianResult.add(cpList);
-			}
-			else {
-				mySelectQuery.tableExpression.whereClause.setEvalArgs(newTable, fullColumnNameList, fullValueList, this, 0);
-				if(mySelectQuery.tableExpression.whereClause.eval())
-				{ // if pass
+				// read value
+				for(int j=0;j<fullValueList.size();j++)
+				{
+					String cname = fullColumnNameList.get(j);
+					Tuple ctuple = columnIndexMap.get(cname);
+					// tidx table @ ith rows @ tidx value
+					String cvalue = wholeRecords.get(ctuple.x)
+												.get(searchIdx.get(ctuple.x))
+												.get(ctuple.y);
+					fullValueList.set(j, cvalue);
+				}
+				
+				// eval
+				if(mySelectQuery.tableExpression.whereClause == null)
+				{
 					ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
 					outCartesianResult.add(cpList);
 				}
-			}
-		} while(getNextIdx(searchIdx, maxIdx));
-		
-		
+				else {
+					mySelectQuery.tableExpression.whereClause.setEvalArgs(newTable, fullColumnNameList, fullValueList, this, 0);
+					if(mySelectQuery.tableExpression.whereClause.eval())
+					{ // if pass
+						ArrayList<String> cpList = (ArrayList<String>) fullValueList.clone();
+						outCartesianResult.add(cpList);
+					}
+				}
+			} while(getNextIdx(searchIdx, maxIdx));
+		}
+
 		// Step 4. print
 		assert(outColumnNameList.size() == outColumnOrderList.size());
 		
