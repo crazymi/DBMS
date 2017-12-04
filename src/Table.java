@@ -393,11 +393,17 @@ public class Table {
 				
 				// no need to keep + sign,, 1+???
 				if(valtype == 1 && strval.contains("+"))
+				{
 					strval = "1" + strval.substring(2, strval.length());
+					newvlist.set(i, strval);
+				}
 				
 				// truncate char string
-				if(valtype == 2 && strval.length() > colfind.char_length)
-					strval = strval.substring(0, colfind.char_length-1);
+				if(valtype == 2 && strval.length() > colfind.char_length + 3)
+				{
+					strval = strval.substring(0, 2 + colfind.char_length) + '\'';
+					newvlist.set(i, strval);
+				}
 			}
 		}
 		
