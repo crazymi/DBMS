@@ -371,18 +371,20 @@ public class WhereController {
 					if(columnName == "") throw new ParseException("hohoho");
 					
 					// need table guessing
+					boolean toxicFlag = true;
 					for(String s : evalArgs.columnNameList)
 					{
-						if(s.contains("." + columnName))
+						if(s.contains("." + columnName) || s.equals(columnName))
 						{
 							columnName = s;
+							toxicFlag = false;
 							break;
 						}
 					}
 					
 					// if fail to guess
 					// Case 24, WHERE_AMBIGUOUS_REFERENCE
-					if(!columnName.contains("."))
+					if(toxicFlag)
 					{
 						System.out.println(DBMSException.getMessage(24, null));
 						throw new ParseException("hohoho");
@@ -466,18 +468,20 @@ public class WhereController {
 					if(columnName == "") throw new ParseException("hohoho");
 					
 					// need table guessing
+					boolean toxicFlag = true;
 					for(String s : evalArgs.columnNameList)
 					{
-						if(s.contains("." + columnName))
+						if(s.contains("." + columnName) || s.equals(columnName))
 						{
 							columnName = s;
+							toxicFlag = false;
 							break;
 						}
 					}
 					
 					// if fail to guess
 					// Case 24, WHERE_AMBIGUOUS_REFERENCE
-					if(!columnName.contains("."))
+					if(toxicFlag)
 					{
 						System.out.println(DBMSException.getMessage(24, null));
 						throw new ParseException("hohoho");

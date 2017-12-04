@@ -744,6 +744,13 @@ public class DBMSController {
 				originColumn = originalColumnMap.get(sc.tableName + "." + sc.columnName);
 			}
 			
+			if(sc.asName != null)
+			{
+				fullColumnNameList.add(sc.asName);
+				fullValueList.add(null);
+				columnIndexMap.put(sc.asName, columnIndexMap.get(sc.tableName + "." +sc.columnName));
+			}
+			
 			// rename
 			originColumn.name = tmpName;
 			outColumnOrderList.add(fullColumnNameList.indexOf(sc.tableName + "." + sc.columnName));
@@ -803,6 +810,12 @@ public class DBMSController {
 				{
 					String cname = fullColumnNameList.get(j);
 					Tuple ctuple = columnIndexMap.get(cname);
+					if(ctuple == null)
+					{
+						System.out.println(DBMSException.getMessage(27, cname));
+						throw new ParseException("hohoho");
+					}
+						
 					// tidx table @ ith rows @ tidx value
 					String cvalue = wholeRecords.get(ctuple.x)
 												.get(searchIdx.get(ctuple.x))
@@ -861,10 +874,11 @@ public class DBMSController {
 		for(int i=0;i<outColumnNameList.size();i++)
 		{
 			String tmp = outColumnNameList.get(i);
-			tmp = tmp.substring(2, tmp.length());
+			// if referenced then cut down
+			if(tmp.contains(".")) tmp = tmp.substring(2, tmp.length());
 			pad = maxSpaceList.get(i) - tmp.length();
-			System.out.print("| ");
-			for(int j=0;j<pad/2;j++)
+			System.out.print("|");
+			for(int j=0;j<pad/2+1;j++)
 				System.out.print(" ");
 			System.out.print(tmp);
 			for(int j=0;j<pad-pad/2+1;j++)
@@ -890,9 +904,9 @@ public class DBMSController {
 			{
 				String tmp = tvalue2string(vvll.get(outColumnOrderList.get(i)));
 				pad = maxSpaceList.get(i) - tmp.length();
-				System.out.print("| ");
+				System.out.print("|");
 				System.out.print(tmp);
-				for(int j=0;j<pad+1;j++)
+				for(int j=0;j<pad+2;j++)
 					System.out.print(" ");
 			}
 			System.out.print("|");
