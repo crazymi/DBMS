@@ -170,6 +170,10 @@ public class DBMSController {
 	    			  refUpdate(c.reference_table, -1);
 	    		  }
 	    	  }
+	    	  
+	    	  int delcnt = deleteAll(target);
+	    	  System.out.println(DBMSException.getMessage(25, String.valueOf(delcnt)));
+	    	  
 	    	  cursor.delete();
 	      } else { // == NOTFOUND
 	    	  System.out.println(DBMSException.getMessage(9, null));
@@ -182,6 +186,8 @@ public class DBMSController {
 	    } finally {
 			if(cursor != null) cursor.close();
 		}
+	    
+	    // note that, all of records should be delete too.
 	    
 	    System.out.println("'" + n + "'" + " table is dropped");
 	}
@@ -875,7 +881,8 @@ public class DBMSController {
 		{
 			String tmp = outColumnNameList.get(i);
 			// if referenced then cut down
-			if(tmp.contains(".")) tmp = tmp.substring(2, tmp.length());
+
+			if(tmp.contains(".")) tmp = (tmp.split("\\."))[1];
 			pad = maxSpaceList.get(i) - tmp.length();
 			System.out.print("|");
 			for(int j=0;j<pad/2+1;j++)
